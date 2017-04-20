@@ -71,7 +71,7 @@ fn client_credentials(conn: &PgConnection, req: AccessTokenRequest) -> Result<Ac
   // - client_secret
   // - scope
   if req.client_id.is_none() || req.client_secret.is_none() || req.scope.is_none() {
-    return Err(oauth_error("missing_params"));
+    return Err(oauth_error("invalid_request"));
   }
   let client = match check_client_credentials(conn, &req.client_id.unwrap(), &req.client_secret.unwrap()) {
     Ok(c) => c,

@@ -9,19 +9,18 @@ If you discover a deviation from the aforementioned RFCS that is not already doc
 Of particular note is the fact that clients must be manually created, and that the only grant type currently supported is `client_credentials`.
 
 ## Known Deviations from RFC 6749
-
 - Currently, we only support the client_credentials grant type
-- error response messages may not conform to the RFC completely
+- we currently dont have scenarios where `invalid_scope` or `unauthorized_grant` errors are returned (§ 5.1)
 - Not all optional fields are available
+- we do not currently support Basic authentication for clients issued a password (§ 2.3.1)
 - We do not currently support client application creation via any accessible mechanism
 - We are not currently validating redirect_uri redirections as the appropriate grant(s) are not supported yet
+- redirection endpoint remains unimplemented, as the grant type that requires it is also missing
 
 ## Known Deviations From RFC 7662
-
 - Introspection does not provide the client creator
 - Not all optional fields are available
 
-
 # Contribution Notice
 
-This project is licensed under the MIT license, a copy of which is available alongside this repository in the AUTHORS.md file. Unless expressly stated otherwise, any contributions to this project will automatically be licensed under this license.
+This project is licensed under the Apache 2.0 license, a reference to which is available alongside this repository in the LICENSE file. Unless expressly stated otherwise, any contributions to this project will automatically be licensed under the Apache 2.0 License.
