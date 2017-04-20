@@ -80,27 +80,31 @@ pub struct AuthCode {
 pub struct AuthCodeResponse {
 }
 
-#[derive(FromForm, Serialize, Deserialize)]
-pub struct ClientCredentialsRequest {
-  pub grant_type: String,
-  pub client_id: String,
-  pub client_secret: String,
-  pub scope: String
+#[derive(FromForm, Serialize)]
+pub struct AccessTokenRequest {
+  pub grant_type: Option<String>,
+  pub client_id: Option<String>,
+  pub client_secret: Option<String>,
+  pub scope: Option<String>
 }
 
+// See: https://tools.ietf.org/html/rfc6749#section-5.1
 #[derive(Builder, Debug, Serialize, Deserialize)]
 #[builder(setter(into))]
 pub struct AccessTokenResponse {
   pub token_type: String,
   pub expires_in: i64,
-  pub access_token: String
+  pub access_token: String,
+  pub scope: String
+  // pub refresh_token: String,
+  
 }
 
+// See: https://tools.ietf.org/html/rfc6749#section-5.2
 #[derive(Builder, Debug, Serialize, Deserialize)]
 #[builder(setter(into))]
 pub struct OAuth2Error {
-  pub message: String,
-  pub status: i64
+  pub error: String
 }
 
 #[derive(Builder, Debug, FromForm, Serialize, Deserialize)]
@@ -112,10 +116,16 @@ pub struct IntrospectionRequest {
 
 #[derive(Builder, Debug, Serialize, Deserialize)]
 #[builder(setter(into))]
-pub struct IntrospectionResponse {
+pub struct IntrospectionOkResponse {
   pub active: bool,
   pub scope: Option<String>,
   pub client_id: Option<String>,
   pub exp: Option<i64>,
   pub iat: Option<i64>
+}
+
+#[derive(Builder, Debug, Serialize, Deserialize)]
+#[builder(setter(into))]
+pub struct IntrospectionErrResponse {
+  pub active: bool
 }

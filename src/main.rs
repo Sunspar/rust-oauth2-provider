@@ -24,8 +24,8 @@ fn main() {
 
   rocket::ignite()
     .mount("/oauth", routes![
-      routes::authorize_get, 
-      routes::generate_token, 
-      routes::introspection])
+      routes::authorize, 
+      routes::token_request,
+      routes::token_introspection])
     .launch();
 }
