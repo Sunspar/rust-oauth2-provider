@@ -72,60 +72,15 @@ pub struct AuthCode {
   pub user_id: i32
 }
 
-// The structs below represent request and response objects, and are not
-// directly part of the OAuth 2.0 Specification.
-
-#[derive(Builder, Debug, Serialize, Deserialize)]
+#[derive(Builder, Debug, Serialize, Deserialize, Insertable)]
 #[builder(setter(into))]
-pub struct AuthCodeResponse {
-}
-
-#[derive(FromForm, Serialize)]
-pub struct AccessTokenRequest {
-  pub grant_type: Option<String>,
-  pub client_id: Option<String>,
-  pub client_secret: Option<String>,
-  pub scope: Option<String>
-}
-
-// See: https://tools.ietf.org/html/rfc6749#section-5.1
-#[derive(Builder, Debug, Serialize, Deserialize)]
-#[builder(setter(into))]
-pub struct AccessTokenResponse {
-  pub token_type: String,
-  pub expires_in: i64,
-  pub access_token: String,
-  pub scope: String
-  // pub refresh_token: String,
-  
-}
-
-// See: https://tools.ietf.org/html/rfc6749#section-5.2
-#[derive(Builder, Debug, Serialize, Deserialize)]
-#[builder(setter(into))]
-pub struct OAuth2Error {
-  pub error: String
-}
-
-#[derive(Builder, Debug, FromForm, Serialize, Deserialize)]
-#[builder(setter(into))]
-pub struct IntrospectionRequest {
-  pub token: String,
-  pub token_type_hint: Option<String>
-}
-
-#[derive(Builder, Debug, Serialize, Deserialize)]
-#[builder(setter(into))]
-pub struct IntrospectionOkResponse {
-  pub active: bool,
-  pub scope: Option<String>,
-  pub client_id: Option<String>,
-  pub exp: Option<i64>,
-  pub iat: Option<i64>
-}
-
-#[derive(Builder, Debug, Serialize, Deserialize)]
-#[builder(setter(into))]
-pub struct IntrospectionErrResponse {
-  pub active: bool
+#[table_name="auth_codes"]
+pub struct NewAuthCode {
+  pub client_id: i32,
+  pub name: String,
+  pub scope: String,
+  pub expires_at: DateTime<UTC>,
+  //pub issued_at: DateTime<UTC>,
+  pub redirect_uri: String,
+  pub user_id: i32
 }

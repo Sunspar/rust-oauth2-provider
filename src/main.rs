@@ -1,7 +1,9 @@
 #![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
+extern crate base64;
 extern crate chrono;
+extern crate rand;
 #[macro_use] extern crate derive_builder;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_codegen;
@@ -18,6 +20,7 @@ extern crate serde_json;
 mod models;
 mod persistence;
 mod routes;
+mod utils;
 
 fn main() {
   dotenv::dotenv().ok();
