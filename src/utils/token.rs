@@ -61,7 +61,7 @@ pub fn client_credentials(conn: &PgConnection, req: AccessTokenRequest) -> Resul
     Ok(g) => g,
     Err(msg) => return Err(utils::oauth_error(&msg))
   };
-  let token = utils::generate_token(conn, &client, &grant_type, &req.scope.unwrap());
+  let token = utils::generate_token(conn, &client, &grant_type, &req.scope.unwrap(), None);
   Ok(utils::generate_token_response(token))
 }
 
@@ -76,18 +76,20 @@ pub fn refresh_token(conn: &PgConnection, req: AccessTokenRequest) ->  Result<Ac
   // - (R) refresh_token: The refresh token a client was given when they initially requested an access token.
   // - (O) scope: A scope to request, if you require a REDUCED set of scopes than what was originally used to generate the first token.
 
-  if req.refresh_token.is_none() {
-    return Err(utils::oauth_error("invalid_request"));
-  }
+  let access_token = match utils::check_refresh_token(conn, req.refresh_token.clone()) {
+    Ok(record) => record,
+    Err(msg) => return Err(utils::oauth_error(&msg))
+  };
+  let scopes = match utils::check_scope(conn, req, access_token) {
+    Ok(s) => s,
+    Err(msg) => return Err(utils::oauth_error(&msg))
+  };
 
-  if req.scope.is_some() {
-    // TODO: Ensure no new scopes were passed in
-    ()
-  }
-
-  // TODO: Check for an access token which has the associated refresh token.
-  // If none, invalid_request.
-  // If Some, generate a new token
+  // TODO: Find access token by refresh_token value.
+  // 2. If Some(AccessToken), take scope as sA, and request scope as sB
+  //    Then each space-delimited string in sB must be in the set of space-delimited terms from sA.
+  // 3. If (2) is true, generate a new access token, and return it
+  //    Else return an error message.
 
   // As this is stubbed out for now, we return the unsupported grant error message.
   Err(utils::oauth_error("unsupported_grant_type"))

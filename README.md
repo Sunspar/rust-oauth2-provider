@@ -8,6 +8,14 @@ If you discover a deviation from the aforementioned RFCS that is not already doc
 
 Of particular note is the fact that clients must be manually created, and that the only grant type currently supported is `client_credentials`.
 
+
+## Setup Notes
+As a superuser, install the "uuid-ossp" extension. You can do this by:
+
+```
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```
+
 ## Known Deviations from RFC 6749
 - Currently, we only support the client_credentials grant type
 - we currently dont have scenarios where `invalid_scope` or `unauthorized_grant` errors are returned (§ 5.1)

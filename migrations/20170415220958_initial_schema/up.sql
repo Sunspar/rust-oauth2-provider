@@ -1,7 +1,9 @@
+-- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE clients (
   id SERIAL PRIMARY KEY,
-  identifier VARCHAR(64) NOT NULL,
-  secret VARCHAR(64) NOT NULL,
+  identifier VARCHAR(256) NOT NULL,
+  secret VARCHAR(256) NOT NULL,
   response_type VARCHAR(64) NOT NULL,
   CONSTRAINT clients__unique_identifier
     UNIQUE (identifier)
@@ -27,9 +29,9 @@ CREATE TABLE access_tokens (
   id SERIAL PRIMARY KEY,
   client_id INTEGER NOT NULL,
   grant_id INTEGER NOT NULL,
-  token VARCHAR(64) NOT NULL,
+  token uuid NOT NULL DEFAULT uuid_generate_v4(),
+  refresh_token uuid NOT NULL DEFAULT uuid_generate_v4(),
   scope VARCHAR(255) NOT NULL,
-  refresh_token VARCHAR(64),
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
   issued_at TIMESTAMP WITH TIME ZONE NOT NULL,
   refresh_expires_at TIMESTAMP WITH TIME ZONE,
@@ -38,7 +40,11 @@ CREATE TABLE access_tokens (
     REFERENCES clients (id),
   CONSTRAINT access_tokens__grant_id
     FOREIGN KEY (grant_id)
-    REFERENCES grant_types (id)
+    REFERENCES grant_types (id),
+  CONSTRAINT access_tokens__unique_token
+    UNIQUE(token),
+  CONSTRAINT access_tokens__unique_refresh_token
+    UNIQUE(refresh_token)
 );
 
 CREATE TABLE auth_codes (
@@ -69,5 +75,3 @@ INSERT INTO clients (identifier, secret, response_type) VALUES
   ('abcd1234', 'abcd1234', 'something');
 INSERT INTO client_redirect_uris (client_id, redirect_uri) VALUES
   (1, 'http://localhost/testing/redirect_uri_one');
-INSERT INTO access_tokens (client_id, grant_id, token, scope, issued_at, expires_at) VALUES
-  (1, 4, 'abcdabcd12341234abcdabcd12341234', 'all another-scope something-here', to_timestamp(1492553381), to_timestamp(2492483284));

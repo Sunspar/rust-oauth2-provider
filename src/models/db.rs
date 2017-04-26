@@ -1,6 +1,7 @@
 use persistence::*;
 use chrono::datetime::DateTime;
 use chrono::offset::utc::UTC;
+use uuid::Uuid;
 
 #[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
 #[builder(setter(into))]
@@ -36,9 +37,9 @@ pub struct AccessToken {
   pub id: i32,
   pub client_id: i32,
   pub grant_id: i32,
-  pub token: String,
+  pub token: Uuid,
+  pub refresh_token: Uuid,
   pub scope: String,
-  pub refresh_token: Option<String>,
   pub expires_at: DateTime<UTC>,
   pub issued_at: DateTime<UTC>,
   pub refresh_expires_at: Option<DateTime<UTC>>
@@ -50,13 +51,12 @@ pub struct AccessToken {
 pub struct NewAccessToken {
   pub client_id: i32,
   pub grant_id: i32,
-  pub token: String,
   pub scope: String,
-  pub refresh_token: Option<String>,
   pub expires_at: Option<DateTime<UTC>>,
   pub issued_at: DateTime<UTC>,
   pub refresh_expires_at: Option<DateTime<UTC>>
 }
+
 
 #[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
 #[builder(setter(into))]

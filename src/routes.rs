@@ -2,6 +2,7 @@ use chrono::offset::utc::UTC;
 use diesel::prelude::*;
 use rocket::request::Form;
 use rocket_contrib::JSON;
+use uuid::Uuid;
 
 use models::db::*;
 use models::requests::*;
@@ -41,21 +42,22 @@ pub fn token_request(form: Form<AccessTokenRequest>) -> Result<JSON<AccessTokenR
 pub fn token_introspection(form: Form<IntrospectionRequest>) -> Result<JSON<IntrospectionOkResponse>, JSON<IntrospectionErrResponse>> {
   let request = form.into_inner();
   let conn = &*DB_POOL.get().unwrap();
+  let token_as_uuid = match Uuid::parse_str(&request.token) {
+    Ok(i) => i,
+    Err(_) => return Err(JSON(utils::introspection_error()))
+  };
   let opt_access_token: QueryResult<AccessToken> = access_tokens::table
-    .filter(access_tokens::token.eq(&request.token))
+    .filter(access_tokens::token.eq(token_as_uuid))
     .first(conn);
-
   // No token  -->  not active
   if let Err(_) = opt_access_token {
     return Err(JSON(utils::introspection_error()))
   }
   let access_token = opt_access_token.unwrap();
-
   // expires_at <= Now  -->  not active
   if access_token.expires_at.signed_duration_since(UTC::now()).num_seconds() <= 0 {
     return Err(JSON(utils::introspection_error()))
   }
-
   // Token exists and expires in the future. We're good!
   let opt_client: QueryResult<Client> = clients::table
     .filter(clients::id.eq(access_token.client_id))
@@ -64,7 +66,6 @@ pub fn token_introspection(form: Form<IntrospectionRequest>) -> Result<JSON<Intr
     return Err(JSON(utils::introspection_error()))
   }
   let client = opt_client.unwrap();
-
   // That means that for our current implementation, the token itself is valid.
   return Ok(JSON(IntrospectionOkResponseBuilder::default()
     .active(true)

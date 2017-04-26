@@ -1,9 +1,7 @@
 #![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
-extern crate base64;
 extern crate chrono;
-extern crate rand;
 #[macro_use] extern crate derive_builder;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_codegen;
@@ -16,6 +14,7 @@ extern crate r2d2_diesel;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
+extern crate uuid;
 
 mod models;
 mod persistence;
@@ -24,7 +23,6 @@ mod utils;
 
 fn main() {
   dotenv::dotenv().ok();
-
   rocket::ignite()
     .mount("/oauth", routes![
       routes::authorize, 

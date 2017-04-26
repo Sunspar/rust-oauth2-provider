@@ -11,3 +11,10 @@ we just need to nail down the major components one by one:
 
 NOTICE:
   - make sure postgres has the timezone set to UTC in your pg configuration.
+
+
+
+
+UUID branch
+- Find a way to convert from string inputs to UUIDs for database comparisons
+- double check everything that should be a UUID is in fact a UUID
