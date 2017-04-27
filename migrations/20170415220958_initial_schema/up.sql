@@ -27,14 +27,12 @@ CREATE TABLE client_redirect_uris (
 
 CREATE TABLE access_tokens (
   id SERIAL PRIMARY KEY,
+  token uuid NOT NULL DEFAULT uuid_generate_v4(),
   client_id INTEGER NOT NULL,
   grant_id INTEGER NOT NULL,
-  token uuid NOT NULL DEFAULT uuid_generate_v4(),
-  refresh_token uuid NOT NULL DEFAULT uuid_generate_v4(),
   scope VARCHAR(255) NOT NULL,
-  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
   issued_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  refresh_expires_at TIMESTAMP WITH TIME ZONE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
   CONSTRAINT access_tokens__client_id
     FOREIGN KEY (client_id)
     REFERENCES clients (id),
@@ -42,9 +40,21 @@ CREATE TABLE access_tokens (
     FOREIGN KEY (grant_id)
     REFERENCES grant_types (id),
   CONSTRAINT access_tokens__unique_token
-    UNIQUE(token),
-  CONSTRAINT access_tokens__unique_refresh_token
-    UNIQUE(refresh_token)
+    UNIQUE(token)
+);
+
+CREATE TABLE refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  token uuid NOT NULL DEFAULT uuid_generate_v4(),
+  client_id INTEGER NOT NULL,
+  scope VARCHAR(255) NOT NULL,
+  issued_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  CONSTRAINT refresh_tokens__client_id
+    FOREIGN KEY (client_id)
+    REFERENCES clients (id),
+  CONSTRAINT refresh_tokens__token
+    UNIQUE(token)
 );
 
 CREATE TABLE auth_codes (

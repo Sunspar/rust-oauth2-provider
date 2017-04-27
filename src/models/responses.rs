@@ -11,8 +11,8 @@ pub struct AccessTokenResponse {
   pub expires_in: i64,
   pub access_token: String,
   pub scope: String,
-  refresh_token: Option<String>
-  // pub refresh_token: String,
+  pub refresh_token: Option<String>,
+  pub refresh_expires_in: Option<i64>
 }
 
 // See: https://tools.ietf.org/html/rfc6749#section-5.2

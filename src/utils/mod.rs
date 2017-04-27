@@ -44,6 +44,7 @@ fn check_client_credentials<'r>(conn: &PgConnection, client_id: &'r str, client_
     .filter(clients::identifier.eq(client_id))
     .filter(clients::secret.eq(client_secret))
     .first(conn);
+
   match opt_client {
     Ok(client) => Ok(client),
     Err(_) => Err("invalid_client")
@@ -52,13 +53,14 @@ fn check_client_credentials<'r>(conn: &PgConnection, client_id: &'r str, client_
 
 /// Validates the Grant Type passed in.
 ///
-/// Returns: Result<Grant, &str>
+/// Returns: Result<GrantType, &str>
 /// - Ok(GrantType) --- the grant type is valid, and supported.
 /// - Err(&str)     --- The error message that should get sent back to the caller as part of the OAuth2Error response.
 fn check_grant_type<'r>(conn: &PgConnection, grant_type: &'r str) -> Result<GrantType, &'r str> {
   let opt: QueryResult<GrantType> = grant_types::table
     .filter(grant_types::name.eq(grant_type))
     .first(conn);
+
   match opt {
     Err(_) => Err("invalid_grant"),
     Ok(g) => Ok(g)
@@ -66,77 +68,141 @@ fn check_grant_type<'r>(conn: &PgConnection, grant_type: &'r str) -> Result<Gran
 }
 
 
-fn check_refresh_token<'r>(conn: &PgConnection, rt: Option<String>) -> Result<AccessToken, &'r str> {
-  if rt.is_none() {
-    return Err("invalid_request")
-  }
-  let refresh_token = match Uuid::parse_str(&rt.unwrap()) {
+/// Validates a Refresh Token.
+///
+/// Returns: Result<RefreshToken, &str>
+/// - Ok(RefreshToken) --- the token itself, if valid
+/// - Err(&str)        --- The error message, if invalid
+fn check_refresh_token<'r>(conn: &PgConnection, token: String) -> Result<RefreshToken, &'r str> {
+  let refresh_token = match Uuid::parse_str(&token) {
     Ok(i) => i,
     Err(_) => return Err("invalid_request")
   };
-  let token = access_tokens::table
-    .filter(access_tokens::refresh_token.eq(refresh_token))
-    .order(access_tokens::issued_at.desc())
+
+  let token = refresh_tokens::table
+    .filter(refresh_tokens::token.eq(refresh_token))
+    .order(refresh_tokens::issued_at.desc())
     .first(conn);
+
   match token {
-    Ok(at) => Ok(at),
+    Ok(t) => Ok(t),
     Err(_) => Err("invalid request")
   }
 }
 
-fn check_scope<'r>(_conn: &PgConnection, req: AccessTokenRequest, at: AccessToken) -> Result<String, String> {
-  let old_scopes: Vec<&str> = at.scope.split(' ').collect();
-  let request_scopes = match req.scope {
-    Some(a) => a,
-    None => String::new()
-  };
-  let request_scopes_list: Vec<&str> = request_scopes.split(' ').collect();
-  for s in &request_scopes_list {
+/// Validates a Scope list.
+///
+/// Returns: Result<String, String>
+/// - Ok(String)  --- The valid subset of scopes (i.e the scopes that appear in both the original request, and the existing token)
+/// - Err(String) --- The error message, when invalid
+fn check_scope<'r>(_conn: &PgConnection, req: String, prev: String) -> Result<String, String> {
+  let old_scopes: Vec<&str> = prev.split(' ').collect();
+  let request_scopes: Vec<&str> = req.split(' ').collect();
+
+  for s in &request_scopes {
     if !old_scopes.contains(&s) {
       return Err("invalid_request".to_string())
     }
   }
-  Ok(request_scopes.clone())
+
+  Ok(request_scopes.join(" "))
 }
 
 /// Generates an AccessToken.
 ///
 /// Returns: AccessToken --- the AccessToken to send back to the caller
-pub fn generate_token(conn: &PgConnection, c: &Client, g: &GrantType, scope: &str, rt: Option<String>) -> AccessToken {
-  let token_length = env::var("ACCESS_TOKEN_LENGTH").unwrap().parse::<u64>().unwrap();
+pub fn generate_access_token(conn: &PgConnection, c: &Client, g: &GrantType, scope: &str) -> AccessToken {
   let token_ttl = env::var("ACCESS_TOKEN_TTL").unwrap().parse::<i64>().unwrap();
   let expiry = UTC::now().add(Duration::seconds(token_ttl));
-  let refresh_token = match rt {
-    Some(val) => val,
-    None => String::new()
-  };
-  let new_access_token = NewAccessTokenBuilder::default()
+
+  let new_token = NewAccessTokenBuilder::default()
     .client_id(c.id)
     .grant_id(g.id)
     .scope(scope.clone())
-    .expires_at(expiry)
     .issued_at(UTC::now())
-    .refresh_expires_at(None)
+    .expires_at(expiry)
     .build()
     .unwrap();
-  diesel::insert(&new_access_token)
+
+  let res = diesel::insert(&new_token)
     .into(access_tokens::table)
-    .get_result::<AccessToken>(conn)
+    .get_result::<AccessToken>(conn);
+
+  res.unwrap()
+}
+
+/// Generates a Refresh Token.
+///
+/// Returns: RefreshToken --- A refresh Token for the given client, allowing callers to generate a new
+///                           access token using the stored scope.
+pub fn generate_refresh_token(conn: &PgConnection, c: &Client, s: &str) -> RefreshToken {
+  let token_ttl = env::var("REFRESH_TOKEN_TTL").unwrap().parse::<i64>();
+
+  let expiry = match token_ttl {
+    Ok(-1)  => None,
+    Ok(val) => Some(UTC::now().add(Duration::seconds(val))),
+    Err(_)  => panic!("REFRESH_TOKEN_TTL is not a parseable int.")
+  };
+
+  let new_token = NewRefreshTokenBuilder::default()
+    .client_id(c.id)
+    .scope(s.clone())
+    .issued_at(UTC::now())
+    .expires_at(expiry)
+    .build()
+    .unwrap();
+
+  diesel::insert(&new_token)
+    .into(refresh_tokens::table)
+    .get_result::<RefreshToken>(conn)
     .unwrap()
 }
 
 /// Generates an AccessTokenResponse.
 ///
 /// Returns: AccessTokenResponse --- the access token response object that should be sent to the caller.
-pub fn generate_token_response(at: AccessToken) -> AccessTokenResponse {
+pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> AccessTokenResponse {
   let access_token = at.token.hyphenated().to_string();
-  let refresh_token = at.refresh_token.hyphenated().to_string();
-  AccessTokenResponseBuilder::default()
+  let mut builder = AccessTokenResponseBuilder::default();
+
+  builder
     .token_type("Bearer")
     .expires_in(at.expires_at.signed_duration_since(UTC::now()).num_seconds())
     .access_token(access_token)
-    .refresh_token(refresh_token)
-    .scope(at.scope)
+    .scope(at.scope);
+
+  match rt {
+    Some(refresh_token) => {
+      builder.refresh_token(refresh_token.token.hyphenated().to_string());
+
+      match refresh_token.expires_at {
+        Some(expiry) => builder.refresh_expires_in(Some(expiry.signed_duration_since(UTC::now()).num_seconds())),
+        None => builder.refresh_expires_in(None)
+      }
+    },
+    None => {
+      builder
+        .refresh_token(None)
+        .refresh_expires_in(None)
+    }
+  };
+
+  builder
     .build()
+    .unwrap()
+}
+
+pub fn get_client_by_id(conn: &PgConnection, id: i32) -> Client {
+  // TODO: Make this more flexible via Result<Client, &str> or something.
+  clients::table
+    .filter(clients::id.eq(id))
+    .first(conn)
+    .unwrap()
+}
+
+pub fn get_grant_type_by_name(conn: &PgConnection, name: &str)  -> GrantType {
+  grant_types::table
+    .filter(grant_types::name.eq("refresh_token"))
+    .first(conn)
     .unwrap()
 }

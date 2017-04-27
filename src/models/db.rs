@@ -35,14 +35,12 @@ pub struct ClientRedirectURI {
 #[table_name="access_tokens"]
 pub struct AccessToken {
   pub id: i32,
+  pub token: Uuid,
   pub client_id: i32,
   pub grant_id: i32,
-  pub token: Uuid,
-  pub refresh_token: Uuid,
   pub scope: String,
-  pub expires_at: DateTime<UTC>,
   pub issued_at: DateTime<UTC>,
-  pub refresh_expires_at: Option<DateTime<UTC>>
+  pub expires_at: DateTime<UTC>
 }
 
 #[derive(Builder, Debug, Serialize, Deserialize, Insertable)]
@@ -52,11 +50,31 @@ pub struct NewAccessToken {
   pub client_id: i32,
   pub grant_id: i32,
   pub scope: String,
-  pub expires_at: Option<DateTime<UTC>>,
   pub issued_at: DateTime<UTC>,
-  pub refresh_expires_at: Option<DateTime<UTC>>
+  pub expires_at: DateTime<UTC>
 }
 
+#[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
+#[builder(setter(into))]
+#[table_name="refresh_tokens"]
+pub struct RefreshToken {
+  pub id: i32,
+  pub token: Uuid,
+  pub client_id: i32,
+  pub scope: String,
+  pub issued_at: DateTime<UTC>,
+  pub expires_at: Option<DateTime<UTC>>
+}
+
+#[derive(Builder, Debug, Serialize, Deserialize, Insertable)]
+#[builder(setter(into))]
+#[table_name="refresh_tokens"]
+pub struct NewRefreshToken {
+  pub client_id: i32,
+  pub scope: String,
+  pub issued_at: DateTime<UTC>,
+  pub expires_at: Option<DateTime<UTC>>
+}
 
 #[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
 #[builder(setter(into))]

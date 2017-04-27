@@ -1,20 +1,8 @@
-We have the basis down with the models and sql files for the initial migrations,
-we just need to nail down the major components one by one:
+- Validate that success responses for `client_credentials` and `refresh_token` are appropriate
+- validate that error responses for `client_credentials` and `refresh_token` are appropriate
+- Begin validating client credentials if presented
+    - error if the client type sugests we have to validate and we cant due to missing credentials
+- Examing remaining grant types
+- Perform an actual cleanup and refactoring of `utils/mod.rs` as  Im kind of shoving everything in the closet in an attempt to tidy the rest of the room up
 
-- use the todo app in diesel as a starting point for a db pool
-- figure out a clean way to return JSON responses from the two post routes
-- find a way to abstract out the form you get when accessing GET /oauth/authorize
-- find a way to create clients via the web
-- examine other grant types, but get client_credentials working first
-
-
-
-NOTICE:
-  - make sure postgres has the timezone set to UTC in your pg configuration.
-
-
-
-
-UUID branch
-- Find a way to convert from string inputs to UUIDs for database comparisons
-- double check everything that should be a UUID is in fact a UUID
+- Eventually, we need to support the authorize endpoint
