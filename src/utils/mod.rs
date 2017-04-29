@@ -1,3 +1,4 @@
+pub mod rocket_extras;
 pub mod token;
 
 use chrono::Duration;
@@ -12,6 +13,7 @@ use models::db::*;
 use models::requests::*;
 use models::responses::*;
 use uuid::Uuid;
+use base64;
 
 /// Generates an OAuth2Error struct.
 ///
@@ -205,4 +207,25 @@ pub fn get_grant_type_by_name(conn: &PgConnection, name: &str)  -> GrantType {
     .filter(grant_types::name.eq("refresh_token"))
     .first(conn)
     .unwrap()
+}
+
+pub fn validate_authorization_header<'a>(conn: &PgConnection, header: &str) {
+  let parts: Vec<&str> = header.split(' ').collect();
+  match parts[0] {
+    "Basic" => {
+      // Basic tokens for the moment are client id and client secret pairs
+      let value = &parts[1];
+      let decoded_value = base64::decode(&parts[1]);
+      println!("{:?}", decoded_value);
+    },
+    "Bearer" => {
+      // Bearer tokens are base64 encoded access tokens
+      let value = &parts[1];
+      let decoded_value = base64::decode(&parts[1]);
+      println!("{:?}", decoded_value);
+    },
+    _ => ()
+  }
+
+  ()
 }

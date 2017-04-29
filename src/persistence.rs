@@ -5,15 +5,6 @@ use std::env;
 
 infer_schema!("dotenv:DATABASE_URL");
 
-// /// Helper method which gives us an active database connection.
-// ///
-// /// Requires that the .env file is correctly set up with the database url, and that you are using Postgres as your
-// /// database server.
-// pub fn connection() -> PgConnection {
-//   let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-//   PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
-// }
-
 lazy_static! {
     pub static ref DB_POOL: Pool<ConnectionManager<PgConnection>> = init_db_pool();
 }

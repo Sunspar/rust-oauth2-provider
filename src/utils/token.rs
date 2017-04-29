@@ -15,7 +15,7 @@ use diesel::pg::PgConnection;
 ///          - Ok(AccessTokenResponse) if the request was accepted
 ///          - Err(OAuth2Error) prefilled with an error message if something went wrong.
 pub fn authorization_code(conn: &PgConnection, req: AccessTokenRequest) ->  Result<AccessTokenResponse, OAuth2Error> {
-  // Authorization Code requess use the following fields:
+  // Authorization Code requests use the following fields:
   // - (R) grant_type: Should always be "authorization_code", and is expected to have been previously confirmed.
   // - (R) client_id: The client identifier of a previously created Client.
   // - (R) client_secret: The client secret of a previously created Client.

@@ -1,5 +1,7 @@
 use chrono::offset::utc::UTC;
 use diesel::prelude::*;
+use rocket::Request;
+use rocket::http::hyper::header::{Authorization, Basic};
 use rocket::request::Form;
 use rocket_contrib::JSON;
 use uuid::Uuid;
@@ -9,6 +11,13 @@ use models::requests::*;
 use models::responses::*;
 use persistence::*;
 use utils;
+use utils::rocket_extras::AuthorizationToken;
+
+
+#[error(401)]
+pub fn unauthorized_request(req: &Request) -> JSON<OAuth2Error> {
+	JSON(utils::oauth_error("invalid_request"))
+}
 
 #[get("/authorize")]
 pub fn authorize() -> String {
@@ -16,8 +25,8 @@ pub fn authorize() -> String {
 }
 
 #[post("/token", data = "<form>")]
-pub fn token_request(form: Form<AccessTokenRequest>) -> Result<JSON<AccessTokenResponse>, JSON<OAuth2Error>> {
-  let request = form.into_inner();
+pub fn token_request<'r>(form: Form<AccessTokenRequest>, auth_token: AuthorizationToken) -> Result<JSON<AccessTokenResponse>, JSON<OAuth2Error>> {
+	let request = form.into_inner();
   let ref conn = *DB_POOL.get().unwrap();
 
   let result = match request.grant_type.clone() {

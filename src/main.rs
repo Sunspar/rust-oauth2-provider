@@ -1,6 +1,7 @@
 #![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
+extern crate base64;
 extern crate chrono;
 #[macro_use] extern crate derive_builder;
 #[macro_use] extern crate diesel;
@@ -28,5 +29,7 @@ fn main() {
       routes::authorize, 
       routes::token_request,
       routes::token_introspection])
+		.catch(errors![
+			routes::unauthorized_request])
     .launch();
 }
