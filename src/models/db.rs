@@ -10,7 +10,6 @@ pub struct Client {
   pub id: i32,
   pub identifier: String,
   pub secret: String,
-	pub salt: String,
   pub response_type: String
 }
 

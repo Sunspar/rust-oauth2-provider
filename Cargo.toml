@@ -21,11 +21,3 @@ serde = { version = "~ 0.9.0" }
 serde_derive = { version = "~ 0.9.0" }
 serde_json = { version = "~ 0.9.0" }
 uuid = { version = "~ 0.4.0", features = ["serde"] }
-
-[[bin]]
-name = "rocket-server"
-path = "src/rocket-server.rs"
-
-[[bin]]
-name = "generate-client"
-path = "src/generate-client.rs"
