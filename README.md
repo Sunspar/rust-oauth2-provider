@@ -22,21 +22,29 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 ### Known Deviations
 #### RFC 6749
+- No check to ensure that `client_credentials` grant is only used by confidential clients
+- remove the client credentials from the token request, as we're instead forcing users to use the standard header only. We can add this back as a feature later on
+- The following headers are missing where appropriate:
+    - `Cache-Control: no-store`
+    - `Pragma: no-cache`
+    - `Content-Type: application/json;charset=UTF-8`
+- document `refresh_expires_in` on token responses, as its not a standard field.
+- Check if clients need scopes associated with them, and if they do we need to verify scope requests for tokens against their client's scope as well
+- Modify the routes so that most error conditions trigger 400's instead and respond wit the appropriate OAuth2Error message
 - No support for the authorization_code, implicit or client_password grant types
-- we currently dont have scenarios where `invalid_scope` or `unauthorized_grant` errors are returned (§ 5.1)
-- Not all optional fields are available
 - We do not currently support client application creation via any accessible mechanism
-- We are not currently validating redirect_uri redirections as the appropriate grant(s) are not supported yet
 - redirection endpoint remains unimplemented, as the grant type that requires it is also missing
+- We are not currently validating redirect_uri redirections as the appropriate grant(s) are not supported yet
+- Not all optional fields are available
+- missing the `WWW-Authenticate` header in the response when an invalid client is detected
+
+- We should probably be `salt+hash`ing the client_secrets... :)
 
 #### RFC 6750
-- havent even looked at it yet!
+- Consider the form-encoded authentication alongside the authorization header
 
 #### RFC 7662
-- Introspection does not validate calling client (§ 2.1)
-    - does not 401 if the credentials or token provided are invalid
-- Not all optional fields are available
-- Not all error messages are used where appropriate
+- Not all optional fields are available (2.2)
 
 ## License
 Licensed under any of the following licenses, whichever better aligns with your needs:

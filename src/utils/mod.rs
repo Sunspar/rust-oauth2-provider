@@ -10,10 +10,8 @@ use std::env;
 use std::ops::Add;
 use persistence::*;
 use models::db::*;
-use models::requests::*;
 use models::responses::*;
 use uuid::Uuid;
-use base64;
 
 /// Generates an OAuth2Error struct.
 ///
@@ -41,7 +39,8 @@ pub fn introspection_error() -> IntrospectionErrResponse {
 /// Returns: Result<Client, &str>
 /// - Ok(Client) --- The client credentials are valid, and map to the resulting Client object.
 /// - Err(&str)  --- The error message that should get sent back to the caller as part of the OAuth2Error response.
-fn check_client_credentials<'r>(conn: &PgConnection, client_id: &'r str, client_secret: &'r str) -> Result<Client, &'r str> {
+pub fn check_client_credentials<'r>(conn: &PgConnection, client_id: String, client_secret: String) -> Result<Client, &'r str> {
+	println!("{:?} {:?}", client_id, client_secret);
   let opt_client: QueryResult<Client> = clients::table
     .filter(clients::identifier.eq(client_id))
     .filter(clients::secret.eq(client_secret))
@@ -69,13 +68,12 @@ fn check_grant_type<'r>(conn: &PgConnection, grant_type: &'r str) -> Result<Gran
   }
 }
 
-
-/// Validates a Refresh Token.
+/// Validates a Refresh Token, ensuring the client owns the token.
 ///
 /// Returns: Result<RefreshToken, &str>
 /// - Ok(RefreshToken) --- the token itself, if valid
 /// - Err(&str)        --- The error message, if invalid
-fn check_refresh_token<'r>(conn: &PgConnection, token: String) -> Result<RefreshToken, &'r str> {
+fn check_refresh_token<'r>(conn: &PgConnection, client: &Client, token: String) -> Result<RefreshToken, &'r str> {
   let refresh_token = match Uuid::parse_str(&token) {
     Ok(i) => i,
     Err(_) => return Err("invalid_request")
@@ -83,12 +81,13 @@ fn check_refresh_token<'r>(conn: &PgConnection, token: String) -> Result<Refresh
 
   let token = refresh_tokens::table
     .filter(refresh_tokens::token.eq(refresh_token))
+		.filter(refresh_tokens::client_id.eq(client.id))
     .order(refresh_tokens::issued_at.desc())
     .first(conn);
 
   match token {
     Ok(t) => Ok(t),
-    Err(_) => Err("invalid request")
+    Err(_) => Err("invalid_request")
   }
 }
 
@@ -176,7 +175,6 @@ pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> Acc
   match rt {
     Some(refresh_token) => {
       builder.refresh_token(refresh_token.token.hyphenated().to_string());
-
       match refresh_token.expires_at {
         Some(expiry) => builder.refresh_expires_in(Some(expiry.signed_duration_since(UTC::now()).num_seconds())),
         None => builder.refresh_expires_in(None)
@@ -194,38 +192,9 @@ pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> Acc
     .unwrap()
 }
 
-pub fn get_client_by_id(conn: &PgConnection, id: i32) -> Client {
-  // TODO: Make this more flexible via Result<Client, &str> or something.
-  clients::table
-    .filter(clients::id.eq(id))
-    .first(conn)
-    .unwrap()
-}
-
 pub fn get_grant_type_by_name(conn: &PgConnection, name: &str)  -> GrantType {
   grant_types::table
-    .filter(grant_types::name.eq("refresh_token"))
+    .filter(grant_types::name.eq(name))
     .first(conn)
     .unwrap()
-}
-
-pub fn validate_authorization_header<'a>(conn: &PgConnection, header: &str) {
-  let parts: Vec<&str> = header.split(' ').collect();
-  match parts[0] {
-    "Basic" => {
-      // Basic tokens for the moment are client id and client secret pairs
-      let value = &parts[1];
-      let decoded_value = base64::decode(&parts[1]);
-      println!("{:?}", decoded_value);
-    },
-    "Bearer" => {
-      // Bearer tokens are base64 encoded access tokens
-      let value = &parts[1];
-      let decoded_value = base64::decode(&parts[1]);
-      println!("{:?}", decoded_value);
-    },
-    _ => ()
-  }
-
-  ()
 }

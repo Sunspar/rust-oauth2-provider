@@ -1,7 +1,5 @@
 use chrono::offset::utc::UTC;
 use diesel::prelude::*;
-use rocket::Request;
-use rocket::http::hyper::header::{Authorization, Basic};
 use rocket::request::Form;
 use rocket_contrib::JSON;
 use uuid::Uuid;
@@ -15,7 +13,7 @@ use utils::rocket_extras::AuthorizationToken;
 
 
 #[error(401)]
-pub fn unauthorized_request(req: &Request) -> JSON<OAuth2Error> {
+pub fn unauthorized_request() -> JSON<OAuth2Error> {
 	JSON(utils::oauth_error("invalid_request"))
 }
 
@@ -25,16 +23,15 @@ pub fn authorize() -> String {
 }
 
 #[post("/token", data = "<form>")]
-pub fn token_request<'r>(form: Form<AccessTokenRequest>, auth_token: AuthorizationToken) -> Result<JSON<AccessTokenResponse>, JSON<OAuth2Error>> {
+pub fn token_request(form: Form<AccessTokenRequest>, auth: AuthorizationToken) -> Result<JSON<AccessTokenResponse>, JSON<OAuth2Error>> {
 	let request = form.into_inner();
   let ref conn = *DB_POOL.get().unwrap();
 
   let result = match request.grant_type.clone() {
     Some(gt) => {
       match gt.as_str() {
-        "client_credentials" => utils::token::client_credentials(conn, request),
-        "refresh_token"      => utils::token::refresh_token(conn, request),
-        "authorization_code" => utils::token::authorization_code(conn, request),
+        "client_credentials" => utils::token::client_credentials(conn, request, auth),
+        "refresh_token"      => utils::token::refresh_token(conn, request, auth),
         _                    => Err(utils::oauth_error("unsupported_grant_type"))
       }
     },
@@ -47,10 +44,19 @@ pub fn token_request<'r>(form: Form<AccessTokenRequest>, auth_token: Authorizati
   }
 }
 
-#[post("/introspection", data = "<form>")]
-pub fn token_introspection(form: Form<IntrospectionRequest>) -> Result<JSON<IntrospectionOkResponse>, JSON<IntrospectionErrResponse>> {
+#[post("/introspect", data = "<form>")]
+pub fn token_introspection(form: Form<IntrospectionRequest>, auth: AuthorizationToken) -> Result<JSON<IntrospectionOkResponse>, JSON<IntrospectionErrResponse>> {
   let request = form.into_inner();
-  let conn = &*DB_POOL.get().unwrap();
+	let conn = &*DB_POOL.get().unwrap();
+
+	// Ensure client is valid at all
+	let client = match utils::check_client_credentials(conn, auth.user, auth.pass) {
+    Ok(c) => c,
+    Err(_) => return Err(JSON(utils::introspection_error()))
+  };
+
+	// Tokens are always UUIDs
+	// No token  -->  not active
   let token_as_uuid = match Uuid::parse_str(&request.token) {
     Ok(i) => i,
     Err(_) => return Err(JSON(utils::introspection_error()))
@@ -58,23 +64,22 @@ pub fn token_introspection(form: Form<IntrospectionRequest>) -> Result<JSON<Intr
   let opt_access_token: QueryResult<AccessToken> = access_tokens::table
     .filter(access_tokens::token.eq(token_as_uuid))
     .first(conn);
-  // No token  -->  not active
-  if let Err(_) = opt_access_token {
-    return Err(JSON(utils::introspection_error()))
-  }
-  let access_token = opt_access_token.unwrap();
+  let access_token = match opt_access_token {
+		Ok(at) => at,
+		Err(_) => return Err(JSON(utils::introspection_error()))
+	};
+
+	// Make sure the authenticated client owns this token
+	if client.id != access_token.client_id {
+		return Err(JSON(utils::introspection_error()))
+	}
+
   // expires_at <= Now  -->  not active
   if access_token.expires_at.signed_duration_since(UTC::now()).num_seconds() <= 0 {
     return Err(JSON(utils::introspection_error()))
   }
-  // Token exists and expires in the future. We're good!
-  let opt_client: QueryResult<Client> = clients::table
-    .filter(clients::id.eq(access_token.client_id))
-    .first(conn);
-  if let Err(_) = opt_client {
-    return Err(JSON(utils::introspection_error()))
-  }
-  let client = opt_client.unwrap();
+
+
   // That means that for our current implementation, the token itself is valid.
   return Ok(JSON(IntrospectionOkResponseBuilder::default()
     .active(true)
