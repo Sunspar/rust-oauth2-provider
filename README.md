@@ -15,6 +15,13 @@ As a superuser, install the "uuid-ossp" extension. You can do this by:
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ```
 
+## Client Creation
+Currently client creation needs to happen manually. This means that you need to insert rows for the `clients` table and possibly `client_redirect_uris` table.
+
+Client identifier and secrets are really just `VARCHAR(256)`es, although the project assumes that the secret stored in the database is encrypted using bcrypt with a cost of 15.
+
+A command-line tool is in the works to be able to quickly add clients without having to fiddle with the database.
+
 ## Relevant RFCs
 - [RFC 6749](https://tools.ietf.org/html/rfc6749) which describes the OAuth 2.0 Specification
 - [RFC 6750](https://tools.ietf.org/html/rfc6750) which describes Bearer Token usage
@@ -37,8 +44,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 - We are not currently validating redirect_uri redirections as the appropriate grant(s) are not supported yet
 - Not all optional fields are available
 - missing the `WWW-Authenticate` header in the response when an invalid client is detected
-
-- We should probably be `salt+hash`ing the client_secrets... :)
 
 #### RFC 6750
 - Consider the form-encoded authentication alongside the authorization header

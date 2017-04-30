@@ -1,6 +1,7 @@
 pub mod rocket_extras;
 pub mod token;
 
+use bcrypt;
 use chrono::Duration;
 use chrono::offset::utc::UTC;
 use diesel;
@@ -40,16 +41,22 @@ pub fn introspection_error() -> IntrospectionErrResponse {
 /// - Ok(Client) --- The client credentials are valid, and map to the resulting Client object.
 /// - Err(&str)  --- The error message that should get sent back to the caller as part of the OAuth2Error response.
 pub fn check_client_credentials<'r>(conn: &PgConnection, client_id: String, client_secret: String) -> Result<Client, &'r str> {
-	println!("{:?} {:?}", client_id, client_secret);
   let opt_client: QueryResult<Client> = clients::table
     .filter(clients::identifier.eq(client_id))
-    .filter(clients::secret.eq(client_secret))
     .first(conn);
+	let unverified_client = match opt_client {
+		Ok(c) => c,
+		Err(_) => return Err("invalid_client")
+	};
 
-  match opt_client {
-    Ok(client) => Ok(client),
-    Err(_) => Err("invalid_client")
-  }
+	//println!("{:?}", bcrypt::hash("abcd1234", 8));
+
+	// Check the hashed client_secret against the user provided secret + the clients marked salt
+	if let Err(_) = bcrypt::verify(&client_secret, &unverified_client.secret) {
+		return Err("invalid_client");
+	}
+
+	Ok(unverified_client)
 }
 
 /// Validates the Grant Type passed in.
@@ -96,7 +103,7 @@ fn check_refresh_token<'r>(conn: &PgConnection, client: &Client, token: String) 
 /// Returns: Result<String, String>
 /// - Ok(String)  --- The valid subset of scopes (i.e the scopes that appear in both the original request, and the existing token)
 /// - Err(String) --- The error message, when invalid
-fn check_scope<'r>(_conn: &PgConnection, req: String, prev: String) -> Result<String, String> {
+fn check_scope(_conn: &PgConnection, req: String, prev: String) -> Result<String, String> {
   let old_scopes: Vec<&str> = prev.split(' ').collect();
   let request_scopes: Vec<&str> = req.split(' ').collect();
 

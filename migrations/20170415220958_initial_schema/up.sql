@@ -81,7 +81,7 @@ INSERT INTO grant_types (name) VALUES
 
 
 
-INSERT INTO clients (identifier, secret, response_type) VALUES
-  ('abcd1234', 'abcd1234', 'something');
+INSERT INTO clients (identifier, secret, salt, response_type) VALUES
+  ('abcd1234', 'abcd1234', 'testsalt', 'something');
 INSERT INTO client_redirect_uris (client_id, redirect_uri) VALUES
   (1, 'http://localhost/testing/redirect_uri_one');
