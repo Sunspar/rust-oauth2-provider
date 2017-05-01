@@ -9,11 +9,25 @@ If you discover a deviation from the relevant RFCs that is not already documente
 Of particular note is the fact that clients must be manually created.
 
 ## Setup Notes
-As a superuser, install the "uuid-ossp" extension. You can do this by:
-
+As a user able to install extensions, install the "uuid-ossp" extension. You can do this by:
 ```
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ```
+
+
+## Environment Variables
+### The .env File
+This application makes use of a file named `.env` in order to provide runtime configuration for thinks like hosted port, exiory timeframes, etc.
+Currently there are a lot of `unwrap()`s, so you'll want to double check the values you're providing match the documentation below.
+
+### Variables Used
+| Name | Required? | Type | Description |
+| :-: | :-: | :-: | :-: |
+| DATABASE_URL | Yes | String | The postgres:// url to the database. Include user and password in the url. |
+| ACCESS_TOKEN_TTL | Yes | Signed Integer |  The amount of time (in seconds) that access tokens are valid for. |
+| REFRESH_TOKEN_TTL | Yes | Signed Integer | The amount of time (in seconds) that refresh tokens are valid for. You may use -1 to ensure they never expire. |
+| ROCKET_HOST | No | IP | The ip to bind to. May also be things like localhost. |
+| ROCKET_PORT| No | Unsigned Integer | The port to bind Rocket to when starting the web server. |
 
 ## Client Creation
 Currently client creation needs to happen manually. This means that you need to insert rows for the `clients` table and possibly `client_redirect_uris` table.
