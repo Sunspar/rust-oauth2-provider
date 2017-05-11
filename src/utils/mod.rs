@@ -1,4 +1,3 @@
-pub mod rocket_extras;
 pub mod token;
 
 use bcrypt;
@@ -13,16 +12,6 @@ use persistence::*;
 use models::db::*;
 use models::responses::*;
 use uuid::Uuid;
-
-/// Generates an OAuth2Error struct.
-///
-/// Returns: OAuth2Error --- the OAuth2Error struct to serialize and send back to the caller.
-pub fn oauth_error(message: &str) -> OAuth2Error {
-  OAuth2ErrorBuilder::default()
-    .error(message)
-    .build()
-    .unwrap()
-}
 
 /// Generates an IntrospectionErrResponse struct.
 ///
@@ -41,21 +30,27 @@ pub fn introspection_error() -> IntrospectionErrResponse {
 /// - Ok(Client) --- The client credentials are valid, and map to the resulting Client object.
 /// - Err(&str)  --- The error message that should get sent back to the caller as part of the OAuth2Error response.
 pub fn check_client_credentials<'r>(conn: &PgConnection, client_id: String, client_secret: String) -> Result<Client, &'r str> {
+	trace!("Checking client credentials...");
   let opt_client: QueryResult<Client> = clients::table
     .filter(clients::identifier.eq(client_id))
     .first(conn);
 	let unverified_client = match opt_client {
-		Ok(c) => c,
-		Err(_) => return Err("invalid_client")
+		Ok(c) => {
+			trace!("unverified_client: {:?}", c);
+			c
+		},
+		Err(_) => {
+			trace!("No client valid for these credentials. Returning with `invalid_client` error.");
+			return Err("invalid_client")
+		}
 	};
-
-	//println!("{:?}", bcrypt::hash("abcd1234", 8));
 
 	// Check the hashed client_secret against the user provided secret + the clients marked salt
 	if let Err(_) = bcrypt::verify(&client_secret, &unverified_client.secret) {
+		trace!("client secret validation failed. Returning with `invalid_client` error.");
 		return Err("invalid_client");
 	}
-
+	debug!("Client credentials are valid!");
 	Ok(unverified_client)
 }
 

@@ -2,8 +2,9 @@ use persistence::*;
 use chrono::datetime::DateTime;
 use chrono::offset::utc::UTC;
 use uuid::Uuid;
+use std::fmt;
 
-#[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
+#[derive(Builder, Serialize, Deserialize, Identifiable, Queryable, Associations)]
 #[builder(setter(into))]
 #[table_name="clients"]
 pub struct Client {
@@ -11,6 +12,12 @@ pub struct Client {
   pub identifier: String,
   pub secret: String,
   pub response_type: String
+}
+
+impl fmt::Debug for Client {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "Client {{ id: {}, identifier: {}, secret: [REDACTED], response_type: {} }}", self.id, self.identifier, self.response_type)
+	}
 }
 
 #[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]

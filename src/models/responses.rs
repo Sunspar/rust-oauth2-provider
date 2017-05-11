@@ -1,3 +1,5 @@
+use iron::status;
+
 #[derive(Builder, Debug, Serialize, Deserialize)]
 #[builder(setter(into))]
 pub struct AuthCodeResponse {
@@ -15,13 +17,6 @@ pub struct AccessTokenResponse {
   pub refresh_expires_in: Option<i64>
 }
 
-// See: https://tools.ietf.org/html/rfc6749#section-5.2
-#[derive(Builder, Debug, Serialize, Deserialize)]
-#[builder(setter(into))]
-pub struct OAuth2Error {
-  pub error: String
-}
-
 #[derive(Builder, Debug, Serialize, Deserialize)]
 #[builder(setter(into))]
 pub struct IntrospectionOkResponse {
@@ -36,4 +31,40 @@ pub struct IntrospectionOkResponse {
 #[builder(setter(into))]
 pub struct IntrospectionErrResponse {
   pub active: bool
+}
+
+// See: https://tools.ietf.org/html/rfc6749#section-5.2
+#[derive(Builder, Debug, Serialize)]
+#[builder(setter(into))]
+pub struct OAuth2ErrorResponse {
+  pub error: String
+}
+
+pub enum OAuth2Error {
+	InvalidRequest,
+	InvalidClient,
+	InvalidGrant,
+	UnauthorizedClient,
+	UnsupportedGrantType,
+	InvalidScope
+}
+
+impl OAuth2Error {
+	pub fn to_response(&self) -> (status::Status, OAuth2ErrorResponse) {
+		match *self {
+			OAuth2Error::InvalidRequest       => (status::BadRequest,   self.generate_struct("invalid_request")),
+			OAuth2Error::InvalidClient        => (status::Unauthorized, self.generate_struct("invalid_client")),
+			OAuth2Error::InvalidGrant         => (status::BadRequest,   self.generate_struct("invalid_grant")),
+			OAuth2Error::UnauthorizedClient   => (status::BadRequest,   self.generate_struct("unauthorized_client")),
+			OAuth2Error::UnsupportedGrantType => (status::BadRequest,   self.generate_struct("unsupported_grant_type")),
+			OAuth2Error::InvalidScope         => (status::BadRequest,   self.generate_struct("invalid_scope"))
+		}
+	}
+
+	fn generate_struct(&self, msg: & str) -> OAuth2ErrorResponse {
+		OAuth2ErrorResponseBuilder::default()
+			.error(msg)
+			.build()
+			.unwrap()
+	}
 }
