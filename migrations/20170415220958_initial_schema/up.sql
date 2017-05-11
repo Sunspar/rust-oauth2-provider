@@ -82,6 +82,6 @@ INSERT INTO grant_types (name) VALUES
 
 
 INSERT INTO clients (identifier, secret, response_type) VALUES
-  ('abcd1234', '$2y$10$/NItM85Ks.Yp2n.yF4i7TuhfRTfWryJggU.TPr1AXG/V5uH01g2yu', 'confidential');
+  ('abcd1234', '$2a$06$Wx3RCAxnyFgg10LaCpiPRObFH8H1IQU81QOtrr7UYDAUV6pUO5GE6', 'confidential');
 INSERT INTO client_redirect_uris (client_id, redirect_uri) VALUES
   (1, 'http://localhost/testing/redirect_uri_one');
