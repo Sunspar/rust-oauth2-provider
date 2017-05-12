@@ -20,13 +20,13 @@ pub fn client_credentials(conn: &PgConnection, req: AccessTokenRequest, auth: Au
   if req.scope.is_none() {
     return Err(OAuth2Error::InvalidRequest);
   }
-  let client = match utils::check_client_credentials(conn, auth.user, auth.pass) {
+  let client = match utils::check_client_credentials(conn, &auth.user, &auth.pass) {
     Ok(c) => c,
-    Err(_) => return Err(OAuth2Error::InvalidClient)
+    Err(e) => return Err(e)
   };
   let grant_type = match utils::check_grant_type(conn, &req.grant_type.unwrap()) {
     Ok(g) => g,
-    Err(_) => return Err(OAuth2Error::UnsupportedGrantType)
+    Err(e) => return Err(e)
   };
   let scope = &req.scope.unwrap();
   let at = utils::generate_access_token(conn, &client, &grant_type, scope);
@@ -52,17 +52,17 @@ pub fn refresh_token(conn: &PgConnection, req: AccessTokenRequest, auth: Authori
 
 	// Fetch the building blocks using request data. This means the client, refresh token, and scope.
 	// For the client and refresh token, we should be able to get hits out of the database.
-	let client = match utils::check_client_credentials(conn, auth.user, auth.pass) {
+	let client = match utils::check_client_credentials(conn, &auth.user, &auth.pass) {
     Ok(c) => c,
     Err(_) => return Err(OAuth2Error::InvalidClient)
   };
 
-  let refresh_token = match utils::check_refresh_token(conn, &client, req.refresh_token.clone().unwrap()) {
+  let refresh_token = match utils::check_refresh_token(conn, &client, &req.refresh_token.clone().unwrap()) {
     Ok(record) => record,
     Err(_) => return Err(OAuth2Error::InvalidRequest)
   };
 
-  let scope = match utils::check_scope(conn, req.scope.unwrap(), refresh_token.scope.clone()) {
+  let scope = match utils::check_scope(conn, &req.scope.unwrap(), &refresh_token.scope.clone()) {
     Ok(s) => s,
     Err(_) => return Err(OAuth2Error::InvalidScope)
   };

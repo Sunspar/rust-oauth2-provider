@@ -27,7 +27,7 @@ extern crate urlencoded;
 extern crate log4rs;
 
 // Custom headers use the hyper crate directly
-#[macro_use] extern crate hyper;
+extern crate hyper;
 
 use iron::prelude::*;
 use std::env;

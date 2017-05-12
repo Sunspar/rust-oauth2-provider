@@ -61,7 +61,7 @@ impl OAuth2Error {
 		}
 	}
 
-	fn generate_struct(&self, msg: & str) -> OAuth2ErrorResponse {
+	fn generate_struct(&self, msg: &str) -> OAuth2ErrorResponse {
 		OAuth2ErrorResponseBuilder::default()
 			.error(msg)
 			.build()
