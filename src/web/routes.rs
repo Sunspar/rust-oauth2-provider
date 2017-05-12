@@ -84,7 +84,7 @@ pub fn introspect(req: &mut Request) -> IronResult<Response> {
   };
   trace!("request: {:?}", request);
   // Ensure client is valid at all
-  let client = match utils::check_client_credentials(conn, auth.user, auth.pass) {
+  let client = match utils::check_client_credentials(conn, &auth.user, &auth.pass) {
     Ok(c) => c,
     Err(_) => return Ok(Response::with((status::Ok, serde_json::to_string(&utils::introspection_error()).unwrap())))
   };
