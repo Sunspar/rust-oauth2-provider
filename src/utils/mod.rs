@@ -29,29 +29,41 @@ pub fn introspection_error() -> IntrospectionErrResponse {
 /// Returns: Result<Client, OAuth2Error>
 /// - Ok(Client)       --- The client credentials are valid, and map to the resulting Client object.
 /// - Err(OAuth2Error) --- The Error value
-pub fn check_client_credentials<'a>(conn: &PgConnection, client_id: &'a str, client_secret: &'a str) -> Result<Client, OAuth2Error> {
-	trace!("Checking client credentials...");
+pub fn check_client_credentials<'a>(
+    conn: &PgConnection,
+    client_id: &'a str,
+    client_secret: &'a str)
+    -> Result<Client, OAuth2ErrorResponse> {
+  trace!("Checking client credentials...");
   let opt_client: QueryResult<Client> = clients::table
     .filter(clients::identifier.eq(client_id))
     .first(conn);
-	let unverified_client = match opt_client {
-		Ok(c) => {
-			trace!("unverified_client: {:?}", c);
-			c
-		},
-		Err(_) => {
-			trace!("No client with this username exists. Returning with `invalid_client` error.");
-			return Err(OAuth2Error::InvalidClient)
-		}
-	};
+  let unverified_client = match opt_client {
+    Ok(c) => {
+      trace!("unverified_client: {:?}", c);
+      c
+    },
+    Err(_) => {
+      trace!("No client with this username exists. Returning with `invalid_client` error.");
+      return Err(OAuth2ErrorResponse::InvalidClient)
+    }
+  };
 
-	// Check the hashed client_secret against the user provided secret + the clients marked salt
-	if let Err(_) = bcrypt::verify(&client_secret, &unverified_client.secret) {
-		trace!("client secret validation failed. Returning with `invalid_client` error.");
-		return Err(OAuth2Error::InvalidClient);
-	}
-	debug!("Client credentials are valid!");
-	Ok(unverified_client)
+  // Check the hashed client_secret against the user provided secret + the clients marked salt
+  match  bcrypt::verify(&client_secret, &unverified_client.secret) {
+    Err(why) => {
+      trace!("Failed to verify client secret. Reason: {:?}", why);
+      Err(OAuth2ErrorResponse::InvalidClient)
+    },
+    Ok(false) => {
+      warn!("Client secret failed validation.");
+      Err(OAuth2ErrorResponse::InvalidClient)
+    },
+    Ok(true) => {
+      trace!("Client credentials are valid!");
+      Ok(unverified_client)
+    }
+  }
 }
 
 /// Validates the Grant Type passed in.
@@ -59,12 +71,12 @@ pub fn check_client_credentials<'a>(conn: &PgConnection, client_id: &'a str, cli
 /// Returns: Result<GrantType, OAuth2Error>
 /// - Ok(GrantType)    --- the grant type is valid, and supported.
 /// - Err(OAuth2Error) --- The Error value
-fn check_grant_type<'r>(conn: &PgConnection, grant_type: &'r str) -> Result<GrantType, OAuth2Error> {
+fn check_grant_type<'r>(conn: &PgConnection, grant_type: &'r str) -> Result<GrantType, OAuth2ErrorResponse> {
   let opt: QueryResult<GrantType> = grant_types::table
     .filter(grant_types::name.eq(grant_type))
     .first(conn);
   match opt {
-    Err(_) => Err(OAuth2Error::InvalidGrant),
+    Err(_) => Err(OAuth2ErrorResponse::InvalidGrant),
     Ok(g)  => Ok(g)
   }
 }
@@ -74,21 +86,25 @@ fn check_grant_type<'r>(conn: &PgConnection, grant_type: &'r str) -> Result<Gran
 /// Returns: Result<RefreshToken, OAuth2Error>
 /// - Ok(RefreshToken) --- the token itself, if valid
 /// - Err(OAuth2Error) --- The Error value
-fn check_refresh_token<'a>(conn: &PgConnection, client: &Client, token: &'a str) -> Result<RefreshToken, OAuth2Error> {
+fn check_refresh_token<'a>(
+    conn: &PgConnection,
+    client: &Client,
+    token: &'a str)
+    -> Result<RefreshToken, OAuth2ErrorResponse> {
   let refresh_token = match Uuid::parse_str(&token) {
     Ok(i) => i,
-    Err(_) => return Err(OAuth2Error::InvalidRequest)
+    Err(_) => return Err(OAuth2ErrorResponse::InvalidRequest)
   };
 
   let token = refresh_tokens::table
     .filter(refresh_tokens::token.eq(refresh_token))
-		.filter(refresh_tokens::client_id.eq(client.id))
+    .filter(refresh_tokens::client_id.eq(client.id))
     .order(refresh_tokens::issued_at.desc())
     .first(conn);
 
   match token {
     Ok(t) => Ok(t),
-    Err(_) => Err(OAuth2Error::InvalidRequest)
+    Err(_) => Err(OAuth2ErrorResponse::InvalidRequest)
   }
 }
 
@@ -96,15 +112,15 @@ fn check_refresh_token<'a>(conn: &PgConnection, client: &Client, token: &'a str)
 ///
 /// Returns: Result<String, OAuth2Error>
 /// - Ok(String)       --- The valid subset of scopes (i.e the scopes that appear in both the
-/// 											 original request, and the existing token)
+///                        original request, and the existing token)
 /// - Err(OAuth2Error) --- The Error value
-fn check_scope<'a>(_conn: &PgConnection, req: &'a str, prev: &'a str) -> Result<String, OAuth2Error> {
+fn check_scope<'a>(_conn: &PgConnection, req: &'a str, prev: &'a str) -> Result<String, OAuth2ErrorResponse> {
   let old_scopes: Vec<&str> = prev.split(' ').collect();
   let request_scopes: Vec<&str> = req.split(' ').collect();
 
   for s in &request_scopes {
     if !old_scopes.contains(&s) {
-      return Err(OAuth2Error::InvalidRequest)
+      return Err(OAuth2ErrorResponse::InvalidRequest)
     }
   }
 

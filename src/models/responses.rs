@@ -1,9 +1,9 @@
-use iron::status;
-
-#[derive(Builder, Debug, Serialize, Deserialize)]
-#[builder(setter(into))]
-pub struct AuthCodeResponse {
-}
+use rocket::http::{ContentType, Status};
+use rocket::response::Result as RocketResult;
+use rocket::response::{Response, Responder};
+use std::io::Cursor;
+use serde_json;
+use rocket::http::hyper::header::{CacheControl, CacheDirective, Pragma};
 
 // See: https://tools.ietf.org/html/rfc6749#section-5.1
 #[derive(Builder, Debug, Serialize, Deserialize)]
@@ -17,6 +17,18 @@ pub struct AccessTokenResponse {
   pub refresh_expires_in: Option<i64>
 }
 
+impl<'r> Responder<'r> for AccessTokenResponse {
+  fn respond(self) -> RocketResult<'r> {
+    Response::build()
+      .raw_header("Content-Type", "application/json")
+      .raw_header("Cache-Control", "no-cache, no-store")
+      .raw_header("Pragma", "no-cache")
+      .status(Status::Ok)
+      .sized_body(Cursor::new(serde_json::to_string(&self).unwrap()))
+      .ok()
+  }
+}
+
 #[derive(Builder, Debug, Serialize, Deserialize)]
 #[builder(setter(into))]
 pub struct IntrospectionOkResponse {
@@ -27,44 +39,84 @@ pub struct IntrospectionOkResponse {
   pub iat: Option<i64>
 }
 
+impl<'r> Responder<'r> for IntrospectionOkResponse {
+  fn respond(self) -> RocketResult<'r> {
+    Response::build()
+      .header(ContentType::JSON)
+      .header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::NoStore]))
+      .header(Pragma::NoCache)
+      .status(Status::Ok)
+      .sized_body(Cursor::new(serde_json::to_string(&self).unwrap()))
+      .ok()
+  }
+}
+
 #[derive(Builder, Debug, Serialize, Deserialize)]
 #[builder(setter(into))]
 pub struct IntrospectionErrResponse {
   pub active: bool
 }
 
-// See: https://tools.ietf.org/html/rfc6749#section-5.2
-#[derive(Builder, Debug, Serialize)]
-#[builder(setter(into))]
-pub struct OAuth2ErrorResponse {
-  pub error: String
+impl<'r> Responder<'r> for IntrospectionErrResponse {
+  fn respond(self) -> RocketResult<'r> {
+    Response::build()
+      .header(ContentType::JSON)
+      .header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::NoStore]))
+      .header(Pragma::NoCache)
+      .status(Status::Ok)
+      .sized_body(Cursor::new(serde_json::to_string(&self).unwrap()))
+      .ok()
+  }
 }
 
-pub enum OAuth2Error {
-	InvalidRequest,
-	InvalidClient,
-	InvalidGrant,
-	UnauthorizedClient,
-	UnsupportedGrantType,
-	InvalidScope
+#[derive(Debug)]
+pub enum OAuth2ErrorResponse {
+  InvalidRequest,
+  InvalidClient,
+  InvalidGrant,
+  UnauthorizedClient,
+  UnsupportedGrantType,
+  InvalidScope
 }
 
-impl OAuth2Error {
-	pub fn to_response(&self) -> (status::Status, OAuth2ErrorResponse) {
-		match *self {
-			OAuth2Error::InvalidRequest       => (status::BadRequest,   self.generate_struct("invalid_request")),
-			OAuth2Error::InvalidClient        => (status::Unauthorized, self.generate_struct("invalid_client")),
-			OAuth2Error::InvalidGrant         => (status::BadRequest,   self.generate_struct("invalid_grant")),
-			OAuth2Error::UnauthorizedClient   => (status::BadRequest,   self.generate_struct("unauthorized_client")),
-			OAuth2Error::UnsupportedGrantType => (status::BadRequest,   self.generate_struct("unsupported_grant_type")),
-			OAuth2Error::InvalidScope         => (status::BadRequest,   self.generate_struct("invalid_scope"))
-		}
-	}
+impl OAuth2ErrorResponse {
+  pub fn message(&self) -> &'static str {
+    match *self {
+      OAuth2ErrorResponse::InvalidRequest       => "invalid_request",
+      OAuth2ErrorResponse::InvalidClient        => "invalid_client",
+      OAuth2ErrorResponse::InvalidGrant         => "invalid_grant",
+      OAuth2ErrorResponse::UnauthorizedClient   => "unauthorized_client",
+      OAuth2ErrorResponse::UnsupportedGrantType => "unsupported_grant_type",
+      OAuth2ErrorResponse::InvalidScope         => "invalid_scope"
+    }
+  }
+}
 
-	fn generate_struct(&self, msg: &str) -> OAuth2ErrorResponse {
-		OAuth2ErrorResponseBuilder::default()
-			.error(msg)
-			.build()
-			.unwrap()
-	}
+impl<'r> Responder<'r> for OAuth2ErrorResponse {
+  fn respond(self) -> RocketResult<'r> {
+    let mut response = Response::build();
+    response
+      .header(ContentType::JSON)
+      .header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::NoStore]))
+      .header(Pragma::NoCache);
+
+    match self {
+      OAuth2ErrorResponse::InvalidClient => {
+        response
+          .raw_header("WWW-Authenticate", "Basic")
+          .status(Status::Unauthorized);
+      },
+      _ => {
+        response.status(Status::BadRequest);
+      }
+    }
+
+    let json = json!({
+      "error": self.message()
+    });
+
+    response
+      .sized_body(Cursor::new(json.to_string()))
+      .ok()
+  }
 }

@@ -2,30 +2,31 @@
 
 This project is intended to provide a basic, standalone, and eventually RFC compliant OAuth 2.0 Provider implementation in [Rust](https://www.rust-lang.org).
 
-It is backed by the [Iron](https://github.com/iron/iron) framework, a web framework based on [Hyper](https://github.com/hyperium/hyper).
+It is backed by the [Rocket](https://github.com/SergioBenitez/rocket) framework, a web framework based on [Hyper](https://github.com/hyperium/hyper).
 
-If you discover a deviation from the relevant RFCs that is not already documented below, please open an issue. We will note it by adding it to the known deviations sections of this readme, and work to resolve the difference.
+If you discover a deviation from the relevant RFCs that is not already documented below, please open an issue.
 
-Of particular note is the fact that clients must be manually created.
+Before we get too far, of particular note is the fact that clients must be manually created.
 
 ## Setup Notes
-As a user able to install extensions, install the "uuid-ossp" extension. You can do this by:
+As a user able to install PostgreSQL extensions, install the "uuid-ossp" extension. You can do this by:
 ```
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ```
 
-## Environment Variables
-### The .env File
-This application makes use of a file named `.env` in order to provide runtime configuration for thinks like hosted port, exiory timeframes, etc.
+## Configuration
+### Environment Variables -- The .env File
+This application makes use of a file named `.env` in order to provide runtime configuration for things like hosted port, expiry timeframes, etc.
 Currently there are a lot of `unwrap()`s, so you'll want to double check the values you're providing match the documentation below.
 
-### Variables Used
 | Name | Required? | Type | Description |
 | :-: | :-: | :-: | :-: |
 | DATABASE_URL | Yes | String | The postgres:// url to the database. Include user and password in the url. |
 | ACCESS_TOKEN_TTL | Yes | Signed Integer |  The amount of time (in seconds) that access tokens are valid for. |
 | REFRESH_TOKEN_TTL | Yes | Signed Integer | The amount of time (in seconds) that refresh tokens are valid for. You may use -1 to ensure they never expire. |
-| SERVER_URL_WITH_PORT | No | IP | The full host with port to bind to. |
+
+### Rocket -- Rocket.toml
+Take a peek at config/Rocket.toml and configure it to your hearts content, the options are relatively straightforward.
 
 ## Client Creation
 Currently client creation needs to happen manually. This means that you need to insert rows for the `clients` table and possibly `client_redirect_uris` table.
@@ -55,9 +56,6 @@ A command-line tool is in the works to be able to quickly add clients without ha
 
 #### RFC 7662
 - Not all optional fields are available (2.2)
-
-## Logging
-This project uses the log and log4rs crates. Log4RS is great as it allows you to compose loggers from various modules at different levels. You can look at the default `log4rs.yml` for more information. By default, we log to the `log/logger.log` file.
 
 ## Security Notice
 A custom fmt::Debug implementation exists for Client in order to make sure that client secrets arent accidentally leaked during logging.
