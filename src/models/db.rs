@@ -15,9 +15,11 @@ pub struct Client {
 }
 
 impl fmt::Debug for Client {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "Client {{ id: {}, identifier: {}, secret: [REDACTED], response_type: {} }}", self.id, self.identifier, self.response_type)
-	}
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, 
+      "Client {{ id: {}, identifier: {}, secret: [REDACTED], response_type: {} }}",
+      self.id, self.identifier, self.response_type)
+  }
 }
 
 #[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
@@ -26,15 +28,6 @@ impl fmt::Debug for Client {
 pub struct GrantType {
   pub id: i32,
   pub name: String
-}
-
-#[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
-#[builder(setter(into))]
-#[table_name="client_redirect_uris"]
-pub struct ClientRedirectURI {
-  pub id: i32,
-  pub client_id: i32,
-  pub redirect_uri: String
 }
 
 #[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
@@ -81,31 +74,4 @@ pub struct NewRefreshToken {
   pub scope: String,
   pub issued_at: DateTime<UTC>,
   pub expires_at: Option<DateTime<UTC>>
-}
-
-#[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
-#[builder(setter(into))]
-#[table_name="auth_codes"]
-pub struct AuthCode {
-  pub id: i32,
-  pub client_id: i32,
-  pub name: String,
-  pub scope: String,
-  pub expires_at: DateTime<UTC>,
-  pub issued_at: DateTime<UTC>,
-  pub redirect_uri: String,
-  pub user_id: i32
-}
-
-#[derive(Builder, Debug, Serialize, Deserialize, Insertable)]
-#[builder(setter(into))]
-#[table_name="auth_codes"]
-pub struct NewAuthCode {
-  pub client_id: i32,
-  pub name: String,
-  pub scope: String,
-  pub expires_at: DateTime<UTC>,
-  //pub issued_at: DateTime<UTC>,
-  pub redirect_uri: String,
-  pub user_id: i32
 }

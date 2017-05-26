@@ -1,101 +1,126 @@
 use chrono::offset::utc::UTC;
 use diesel::prelude::*;
-use iron::prelude::*;
-use iron::status;
-use serde_json;
+use rocket::request::Form;
 use uuid::Uuid;
 
 use models::db::*;
+use models::requests::*;
 use models::responses::*;
 use persistence::*;
 use utils;
-use web;
+use web::headers::AuthorizationToken;
 
-pub fn authorize(_req: &mut Request) -> IronResult<Response> {
-  trace!("Entering the authorize handler.");
-  Ok(Response::with((status::Ok, "Not yet implemented.")))
-}
-
-/// Handler for the POST /oauth/token request.
-pub fn token(req: &mut Request) -> IronResult<Response> {
+#[post("/oauth/token", data="<req>")]
+pub fn token(
+    req: Option<Form<AccessTokenRequest>>, 
+    auth: Option<AuthorizationToken>) 
+    -> Result<AccessTokenResponse, OAuth2ErrorResponse>  {
   trace!("Entering the token handler.");
-  let ref conn = *DB_POOL.get().unwrap();
-  trace!("Successfully grabbed connection from the database connection pool.");
-  let request = match web::utils::extract_access_token_request(req) {
-    Ok(r) => r,
-    Err(why) => {
-      let response = why.to_response();
-      return Ok(Response::with((response.0, serde_json::to_string(&response.1).unwrap())))
+  let auth_token = match auth {
+    Some(at) => {
+      trace!("Token successfully extracted: {:?}", at);
+      at
+    },
+    None     => {
+      trace!("Malformed Authorization header caused the authentication token guard to fail.");
+      return Err(OAuth2ErrorResponse::InvalidClient)
     }
   };
-  trace!("request: {:?}", request);
-  let auth = match web::utils::extract_auth_credentials(req) {
-    Some(at) => at,
+
+  let request = match req {
+    Some(atr) => {
+      let res = atr.into_inner();
+      trace!("Request seems okay. {:?}", res);
+      res
+    },
     None => {
-      let response = OAuth2Error::InvalidClient.to_response();
-      warn!("{}", response.0);
-      return Ok(Response::with((response.0, serde_json::to_string(&response.1).unwrap())))
+      trace!("Request extraction failed. Most likely the user sent an invalid form body.");
+      return Err(OAuth2ErrorResponse::InvalidRequest);
     }
   };
-  trace!("token() auth: {:?}", auth);
+  let ref conn
+   = *DB_POOL.get().unwrap();
+  trace!("Successfully grabbed connection from the database connection pool.");
+
   let result = match request.grant_type.clone() {
-    None => Err(OAuth2Error::UnsupportedGrantType),
+    None => Err(OAuth2ErrorResponse::UnsupportedGrantType),
     Some(gt) => {
       match gt.as_str() {
-        "client_credentials" => utils::token::client_credentials(conn, request, auth.clone()),
-        "refresh_token"      => utils::token::refresh_token(conn, request, auth.clone()),
-        _                    => Err(OAuth2Error::UnsupportedGrantType)
+        "client_credentials" => utils::token::client_credentials(conn, request, auth_token.clone()),
+        "refresh_token"      => utils::token::refresh_token(conn, request, auth_token.clone()),
+        _                    => Err(OAuth2ErrorResponse::UnsupportedGrantType)
       }
     }
   };
+
   match result {
     Ok(r) => {
-      info!("Client [{}] generated new access token.", auth.user);
-      Ok(Response::with((status::Ok, serde_json::to_string(&r).unwrap())))
+      info!("Client [{}] generated new access token.", auth_token.user);
+      Ok(r)
     },
     Err(r) => {
-      debug!("Error during token generation: {:?}", r.to_response());
-      info!("Client [{}] failed to generate new access token.", auth.user);
-      let response = r.to_response();
-      Ok(Response::with((response.0, serde_json::to_string(&response.1).unwrap())))
+      debug!("Error during token generation: {:?}", r);
+      info!("Client [{}] failed to generate new access token.", auth_token.user);
+      Err(r)
     }
   }
 }
 
-/// Handler for the POST /oauth/introspect request.
-pub fn introspect(req: &mut Request) -> IronResult<Response> {
-  trace!("Entering the introspection handler.");
-  let ref conn = *DB_POOL.get().unwrap();
-  trace!("Received database connection from the database connection pool.");
-  let auth = match web::utils::extract_auth_credentials(req) {
-    Some(at) => at,
+#[post("/oauth/introspect", data="<req>")]
+pub fn introspect(
+    req: Option<Form<IntrospectionRequest>>, 
+    auth: Option<AuthorizationToken>) 
+    -> Result<IntrospectionOkResponse, IntrospectionErrResponse> {
+  let auth_token = match auth {
+    Some(at) => {
+      trace!("Authentication token looks okay: {:?}", at);
+      at
+    },
     None => {
-      let response = OAuth2Error::InvalidClient.to_response();
-      return Ok(Response::with((response.0, serde_json::to_string(&response.1).unwrap())))
+      trace!("Malformed Authorization header caused the authentication token guard to fail.");
+      return Err(utils::introspection_error())
     }
   };
-  trace!("auth: {:?}", auth);
-  let request = match web::utils::extract_introspection_request(req) {
-    Ok(r) => r,
-    Err(_) => {
-      debug!("client mismatch during introspection.");
-      return Ok(Response::with((status::Ok, serde_json::to_string(&utils::introspection_error()).unwrap())))
+
+  let request = match req {
+    Some(ir) => {
+      let res = ir.into_inner();
+      trace!("Request seems okay: {:?}", res);
+      res
+    },
+    None => {
+      trace!("Request extraction failed. Most likely the user sent an invalid form body.");
+      return Err(utils::introspection_error());
     }
   };
-  trace!("request: {:?}", request);
+
+  let ref conn = *DB_POOL.get().unwrap();
+  trace!("Successfully grabbed connection from the database connection pool.");
+
   // Ensure client is valid at all
-  let client = match utils::check_client_credentials(conn, &auth.user, &auth.pass) {
-    Ok(c) => c,
-    Err(_) => return Ok(Response::with((status::Ok, serde_json::to_string(&utils::introspection_error()).unwrap())))
+  let client = match utils::check_client_credentials(conn, &auth_token.user, &auth_token.pass) {
+    Ok(c) => {
+      trace!("Client authenticated successfully.");
+      c
+    },
+    Err(_) => {
+      trace!("Client not authenticated -- most likely typo in user or pass.");
+      return Err(utils::introspection_error())
+    }
   };
-  trace!("client: {:?}", client);
+
   // Tokens are always UUIDs
   // No token  -->  not active
   let token_as_uuid = match Uuid::parse_str(&request.token) {
-    Ok(i) => i,
-    Err(_) =>return Ok(Response::with((status::Ok, serde_json::to_string(&utils::introspection_error()).unwrap())))
+    Ok(i) => {
+      trace!("Token was parsable as UUID. Token: {:?}", i); 
+      i
+    },
+    Err(_) => {
+      trace!("Token was not parsable into UUID. Token: {:?}", request.token);
+      return Err(utils::introspection_error())
+    }
   };
-  trace!("token uuid: {:?}", token_as_uuid.to_string());
   let opt_access_token: QueryResult<AccessToken> = access_tokens::table
     .filter(access_tokens::token.eq(token_as_uuid))
     .first(conn);
@@ -106,19 +131,22 @@ pub fn introspect(req: &mut Request) -> IronResult<Response> {
     },
     Err(why) => {
       debug!("no token generated: {:?}", why);
-      return Ok(Response::with((status::Ok, serde_json::to_string(&utils::introspection_error()).unwrap())))
+      return Err(utils::introspection_error())
     }
   };
+
   // Make sure the authenticated client owns this token
   if client.id != access_token.client_id {
     debug!("Client ID mismatch.");
-    return Ok(Response::with((status::Ok, serde_json::to_string(&utils::introspection_error()).unwrap())))
+    return Err(utils::introspection_error())
   }
+
   // expires_at <= Now  -->  not active
   if access_token.expires_at.signed_duration_since(UTC::now()).num_seconds() <= 0 {
     debug!("Token is expired.");
-    return Ok(Response::with((status::Ok, serde_json::to_string(&utils::introspection_error()).unwrap())))
+    return Err(utils::introspection_error())
   }
+
   // That means that for our current implementation, the token itself is valid.
   let response = IntrospectionOkResponseBuilder::default()
     .active(true)
@@ -130,5 +158,5 @@ pub fn introspect(req: &mut Request) -> IronResult<Response> {
     .unwrap();
   debug!("Token is valid: {:?}", response);
   info!("Client [{}] introspected on token [{}]", response.client_id.clone().unwrap(), request.token);
-  Ok(Response::with((status::Ok, serde_json::to_string(&response).unwrap())))
+  Ok(response)
 }
