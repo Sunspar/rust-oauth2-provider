@@ -24,7 +24,7 @@ impl<'r> Responder<'r> for AccessTokenResponse {
       .raw_header("Cache-Control", "no-cache, no-store")
       .raw_header("Pragma", "no-cache")
       .status(Status::Ok)
-      .sized_body(Cursor::new(serde_json::to_string(&self).unwrap()))
+      .sized_body(Cursor::new(serde_json::to_string(&self).expect("Failed to serialize the AccessTokenResponse.")))
       .ok()
   }
 }
@@ -46,7 +46,7 @@ impl<'r> Responder<'r> for IntrospectionOkResponse {
       .header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::NoStore]))
       .header(Pragma::NoCache)
       .status(Status::Ok)
-      .sized_body(Cursor::new(serde_json::to_string(&self).unwrap()))
+      .sized_body(Cursor::new(serde_json::to_string(&self).expect("Failed to serialize the IntrospectionOkResponse.")))
       .ok()
   }
 }
@@ -64,7 +64,7 @@ impl<'r> Responder<'r> for IntrospectionErrResponse {
       .header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::NoStore]))
       .header(Pragma::NoCache)
       .status(Status::Ok)
-      .sized_body(Cursor::new(serde_json::to_string(&self).unwrap()))
+      .sized_body(Cursor::new(serde_json::to_string(&self).expect("Failed to serialize the IntrospectionErrResponse.")))
       .ok()
   }
 }

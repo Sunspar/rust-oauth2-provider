@@ -39,7 +39,7 @@ pub fn token(
     }
   };
   let ref conn
-   = *DB_POOL.get().unwrap();
+   = *DB_POOL.get().expect("Failed to get a connection from the database pool.");
   trace!("Successfully grabbed connection from the database connection pool.");
 
   let result = match request.grant_type.clone() {
@@ -94,7 +94,7 @@ pub fn introspect(
     }
   };
 
-  let ref conn = *DB_POOL.get().unwrap();
+  let ref conn = *DB_POOL.get().expect("Failed to get a connection from the database pool.");
   trace!("Successfully grabbed connection from the database connection pool.");
 
   // Ensure client is valid at all
@@ -155,8 +155,12 @@ pub fn introspect(
     .exp(Some(access_token.expires_at.timestamp()))
     .iat(Some(access_token.issued_at.timestamp()))
     .build()
-    .unwrap();
+    .expect("Failed to build an IntrospectionOkResponse.");
   debug!("Token is valid: {:?}", response);
-  info!("Client [{}] introspected on token [{}]", response.client_id.clone().unwrap(), request.token);
+  let response_client_id = &response
+    .client_id
+    .clone()
+    .expect("The IntrospectionOkResponse did not have a client_id set.");
+  info!("Client [{}] introspected on token [{}]", response_client_id, request.token);
   Ok(response)
 }

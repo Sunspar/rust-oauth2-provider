@@ -40,10 +40,14 @@ fn fetch_access_token_for_client(rocket: &mut Rocket, at: &AuthorizationToken) -
   assert_headers(&response, false);
   assert_eq!(response.status(), Status::Ok, "Incorrect response code.");
 
-  let body = response.body().and_then(|b| b.into_string()).unwrap();
+  let body = response
+    .body()
+    .and_then(|b| b.into_string())
+    .expect("Response body was not converted into a String value.");
+
   let atr = serde_json::from_str::<AccessTokenResponse>(body.as_str());
   assert!(atr.is_ok(), "JSON response was not deserializable into an AccessTokenResponse: {:?}", atr);
-  atr.unwrap()
+  atr.expect("Failed to get an access token during testing.")
 }
 
 // Helper which performs response header assertions
@@ -67,7 +71,11 @@ fn assert_headers(response: &Response, www_header_expected: bool) {
 }
 
 fn assert_introspect_err_valid(response: &mut Response) {
-  let body = response.body().and_then(|b| b.into_string()).unwrap();
+  let body = response
+    .body()
+    .and_then(|b| b.into_string())
+    .expect("Response body was not converted into a String value.");
+    
   let ier = serde_json::from_str::<IntrospectionErrResponse>(body.as_str())
     .expect("Response was not deserializable in to an IntrospectionErrResponse struct");
   assert_eq!(ier.active, false);
@@ -141,7 +149,11 @@ fn token_client_proper_request() {
   assert_headers(&response, false);
   assert_eq!(response.status(), Status::Ok, "Incorrect response code.");
 
-  let body = response.body().and_then(|b| b.into_string()).unwrap();
+  let body = response
+    .body()
+    .and_then(|b| b.into_string())
+    .expect("Response body was not converted into a String value.");
+    
   let atr = serde_json::from_str::<AccessTokenResponse>(body.as_str());
   assert!(atr.is_ok(), "JSON response was not deserializable into an AccessTokenResponse: {:?}", atr);
 
@@ -248,7 +260,11 @@ fn token_refresh_proper_request() {
   assert_headers(&rt_response, false);
   assert_eq!(rt_response.status(), Status::Ok, "Incorrect response code.");
 
-  let body = rt_response.body().and_then(|b| b.into_string()).unwrap();
+  let body = rt_response
+    .body()
+    .and_then(|b| b.into_string())
+    .expect("Response body was not converted into a String value.");
+    
   let atr = serde_json::from_str::<AccessTokenResponse>(body.as_str());
   assert!(atr.is_ok(), "JSON response was not deserializable into an AccessTokenResponse: {:?}", atr);
 }
@@ -347,7 +363,11 @@ fn introspect_proper_request() {
   assert_headers(&response, false);
   assert_eq!(response.status(), Status::Ok, "Incorrect response code.");
 
-  let body = response.body().and_then(|b| b.into_string()).unwrap();
+  let body = response
+    .body()
+    .and_then(|b| b.into_string())
+    .expect("Response body was not converted into a String value.");
+    
   let atr = serde_json::from_str::<IntrospectionOkResponse>(body.as_str())
     .expect("Response was not deserializable in to an IntrospectionOkResponse struct");
 }

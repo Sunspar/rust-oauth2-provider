@@ -38,12 +38,13 @@ pub fn client_credentials(
   }
 
   // Ensure valid grant type
-  let grant_type = match utils::check_grant_type(conn, &req.grant_type.unwrap()) {
+  let req_grant_type = &req.grant_type.expect("Client Credentials token requests are expected to have a grant type.");
+  let grant_type = match utils::check_grant_type(conn, req_grant_type) {
     Ok(g) => g,
     Err(e) => return Err(e)
   };
 
-  let scope = &req.scope.unwrap();
+  let scope = &req.scope.expect("Client Credentials token requests are expected to have a scope.");
   let at = utils::generate_access_token(conn, &client, &grant_type, scope);
   let rt = utils::generate_refresh_token(conn, &client, scope);
   Ok(utils::generate_token_response(at, Some(rt)))
@@ -71,12 +72,18 @@ pub fn refresh_token(
     Err(_) => return Err(OAuth2ErrorResponse::InvalidClient)
   };
 
-  let refresh_token = match utils::check_refresh_token(conn, &client, &req.refresh_token.clone().unwrap()) {
+  let req_refresh_token = &req
+    .refresh_token
+    .expect("Refresh Token token requests are expected to have a refresh_token.")
+    .clone();
+
+  let refresh_token = match utils::check_refresh_token(conn, &client, req_refresh_token) {
     Ok(record) => record,
     Err(_) => return Err(OAuth2ErrorResponse::InvalidRequest)
   };
 
-  let scope = match utils::check_scope(conn, &req.scope.unwrap(), &refresh_token.scope.clone()) {
+  let req_scope = &req.scope.expect("Refresh Token token requests are expected to have a scope.");
+  let scope = match utils::check_scope(conn, req_scope, &refresh_token.scope.clone()) {
     Ok(s) => s,
     Err(_) => return Err(OAuth2ErrorResponse::InvalidScope)
   };

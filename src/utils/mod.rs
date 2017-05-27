@@ -21,7 +21,7 @@ pub fn introspection_error() -> IntrospectionErrResponse {
   IntrospectionErrResponseBuilder::default()
     .active(false)
     .build()
-    .unwrap()
+    .expect("Failed to build the IntrospectionErrResponse.")
 }
 
 /// Validates the client credentials passed in.
@@ -131,7 +131,11 @@ fn check_scope<'a>(_conn: &PgConnection, req: &'a str, prev: &'a str) -> Result<
 ///
 /// Returns: AccessToken --- the AccessToken to send back to the caller
 pub fn generate_access_token(conn: &PgConnection, c: &Client, g: &GrantType, scope: &str) -> AccessToken {
-  let token_ttl = env::var("ACCESS_TOKEN_TTL").unwrap().parse::<i64>().unwrap();
+  let token_ttl = env::var("ACCESS_TOKEN_TTL")
+    .expect("The environment variable ACCESS_TOKEN_TTL must be set.")
+    .parse::<i64>()
+    .expect("The environment variable ACCESS_TOKEN_TTL must be an integer value.");
+
   let expiry = UTC::now().add(Duration::seconds(token_ttl));
 
   let new_token = NewAccessTokenBuilder::default()
@@ -141,13 +145,12 @@ pub fn generate_access_token(conn: &PgConnection, c: &Client, g: &GrantType, sco
     .issued_at(UTC::now())
     .expires_at(expiry)
     .build()
-    .unwrap();
+    .expect("Failed to build the NewAccessToken.");
 
-  let res = diesel::insert(&new_token)
+  diesel::insert(&new_token)
     .into(access_tokens::table)
-    .get_result::<AccessToken>(conn);
-
-  res.unwrap()
+    .get_result::<AccessToken>(conn)
+    .expect("Expected an AccessToken after inserting, but didnt get one.")
 }
 
 /// Generates a Refresh Token.
@@ -155,12 +158,14 @@ pub fn generate_access_token(conn: &PgConnection, c: &Client, g: &GrantType, sco
 /// Returns: RefreshToken --- A refresh Token for the given client, allowing callers to generate a new
 ///                           access token using the stored scope.
 pub fn generate_refresh_token(conn: &PgConnection, c: &Client, s: &str) -> RefreshToken {
-  let token_ttl = env::var("REFRESH_TOKEN_TTL").unwrap().parse::<i64>();
+  let token_ttl = env::var("REFRESH_TOKEN_TTL")
+    .expect("The environment variable REFRESH_TOKEN_TTL must be set.")
+    .parse::<i64>()
+    .expect("The environment variable REFRESH_TOKEN_TTL must be an integer value.");
 
   let expiry = match token_ttl {
-    Ok(-1)  => None,
-    Ok(val) => Some(UTC::now().add(Duration::seconds(val))),
-    Err(_)  => panic!("REFRESH_TOKEN_TTL is not a parseable int.")
+    -1  => None,
+    val => Some(UTC::now().add(Duration::seconds(val)))
   };
 
   let new_token = NewRefreshTokenBuilder::default()
@@ -169,12 +174,12 @@ pub fn generate_refresh_token(conn: &PgConnection, c: &Client, s: &str) -> Refre
     .issued_at(UTC::now())
     .expires_at(expiry)
     .build()
-    .unwrap();
+    .expect("Failed to build the NewRefreshToken.");
 
   diesel::insert(&new_token)
     .into(refresh_tokens::table)
     .get_result::<RefreshToken>(conn)
-    .unwrap()
+    .expect("Expected a token after inserting, but didnt get one.")
 }
 
 /// Generates an AccessTokenResponse.
@@ -207,12 +212,12 @@ pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> Acc
 
   builder
     .build()
-    .unwrap()
+    .expect("Failed to build the AccessTokenResponse.")
 }
 
 pub fn get_grant_type_by_name(conn: &PgConnection, name: &str)  -> GrantType {
   grant_types::table
     .filter(grant_types::name.eq(name))
     .first(conn)
-    .unwrap()
+    .expect("Failed to fetch a GrantType from the database.")
 }
