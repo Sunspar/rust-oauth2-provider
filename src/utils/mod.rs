@@ -150,7 +150,7 @@ pub fn generate_access_token(conn: &PgConnection, c: &Client, g: &GrantType, sco
   diesel::insert(&new_token)
     .into(access_tokens::table)
     .get_result::<AccessToken>(conn)
-    .expect("Expected an AccessToken after inserting, but didnt get one.")
+    .expect("Expected an AccessToken after inserting, but didn't get one.")
 }
 
 /// Generates a Refresh Token.
@@ -179,7 +179,7 @@ pub fn generate_refresh_token(conn: &PgConnection, c: &Client, s: &str) -> Refre
   diesel::insert(&new_token)
     .into(refresh_tokens::table)
     .get_result::<RefreshToken>(conn)
-    .expect("Expected a token after inserting, but didnt get one.")
+    .expect("Expected a RefreshToken after inserting, but didn't get one.")
 }
 
 /// Generates an AccessTokenResponse.
@@ -219,5 +219,5 @@ pub fn get_grant_type_by_name(conn: &PgConnection, name: &str)  -> GrantType {
   grant_types::table
     .filter(grant_types::name.eq(name))
     .first(conn)
-    .expect("Failed to fetch a GrantType from the database.")
+    .expect("Failed to retrieve a GrantType from the database.")
 }

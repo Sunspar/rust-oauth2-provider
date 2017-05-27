@@ -47,7 +47,7 @@ fn fetch_access_token_for_client(rocket: &mut Rocket, at: &AuthorizationToken) -
 
   let atr = serde_json::from_str::<AccessTokenResponse>(body.as_str());
   assert!(atr.is_ok(), "JSON response was not deserializable into an AccessTokenResponse: {:?}", atr);
-  atr.expect("Failed to get an access token during testing.")
+  atr.expect("Failed to deserialize the AccessToken.")
 }
 
 // Helper which performs response header assertions
