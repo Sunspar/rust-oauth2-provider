@@ -17,7 +17,7 @@ pub struct DatabaseSettings {
     pub user: String,
     pub pass: String,
     pub db_name: String,
-    pub pool_size: u32
+    pub pool_size: u32,
 }
 
 #[derive(Debug, Deserialize)]
