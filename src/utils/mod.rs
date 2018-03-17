@@ -2,16 +2,16 @@ pub mod token;
 
 use bcrypt;
 use chrono::Duration;
-use chrono::offset::utc::UTC;
+use chrono::offset::Utc;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::env;
 use std::ops::Add;
 use persistence::*;
 use models::db::*;
 use models::responses::*;
 use uuid::Uuid;
+use SETTINGS;
 
 /// Generates an IntrospectionErrResponse struct.
 ///
@@ -50,17 +50,17 @@ pub fn check_client_credentials<'a>(
   };
 
   // Check the hashed client_secret against the user provided secret + the clients marked salt
-  match  bcrypt::verify(&client_secret, &unverified_client.secret) {
+  match bcrypt::verify(&client_secret, &unverified_client.secret) {
     Err(why) => {
-      trace!("Failed to verify client secret. Reason: {:?}", why);
+      debug!("Failed to verify client secret. Reason: {:?}", why);
       Err(OAuth2ErrorResponse::InvalidClient)
     },
     Ok(false) => {
-      warn!("Client secret failed validation.");
+      debug!("Client secret failed validation.");
       Err(OAuth2ErrorResponse::InvalidClient)
     },
     Ok(true) => {
-      trace!("Client credentials are valid!");
+      debug!("Client credentials are valid!");
       Ok(unverified_client)
     }
   }
@@ -131,20 +131,20 @@ fn check_scope<'a>(_conn: &PgConnection, req: &'a str, prev: &'a str) -> Result<
 ///
 /// Returns: AccessToken --- the AccessToken to send back to the caller
 pub fn generate_access_token(conn: &PgConnection, c: &Client, g: &GrantType, scope: &str) -> AccessToken {
-  let token_ttl = env::var("ACCESS_TOKEN_TTL").unwrap().parse::<i64>().unwrap();
-  let expiry = UTC::now().add(Duration::seconds(token_ttl));
+  let token_ttl = SETTINGS.oauth.access_token_ttl;
+  let expiry = Utc::now().naive_utc().add(Duration::seconds(token_ttl));
 
   let new_token = NewAccessTokenBuilder::default()
     .client_id(c.id)
     .grant_id(g.id)
     .scope(scope.clone())
-    .issued_at(UTC::now())
+    .issued_at(Utc::now().naive_utc())
     .expires_at(expiry)
     .build()
     .unwrap();
 
-  let res = diesel::insert(&new_token)
-    .into(access_tokens::table)
+  let res = diesel::insert_into(access_tokens::table)
+    .values(&new_token)
     .get_result::<AccessToken>(conn);
 
   res.unwrap()
@@ -155,24 +155,22 @@ pub fn generate_access_token(conn: &PgConnection, c: &Client, g: &GrantType, sco
 /// Returns: RefreshToken --- A refresh Token for the given client, allowing callers to generate a new
 ///                           access token using the stored scope.
 pub fn generate_refresh_token(conn: &PgConnection, c: &Client, s: &str) -> RefreshToken {
-  let token_ttl = env::var("REFRESH_TOKEN_TTL").unwrap().parse::<i64>();
-
+  let token_ttl = SETTINGS.oauth.refresh_token_ttl;
   let expiry = match token_ttl {
-    Ok(-1)  => None,
-    Ok(val) => Some(UTC::now().add(Duration::seconds(val))),
-    Err(_)  => panic!("REFRESH_TOKEN_TTL is not a parseable int.")
+    -1  => None,
+    val => Some(Utc::now().naive_utc().add(Duration::seconds(val))),
   };
 
   let new_token = NewRefreshTokenBuilder::default()
     .client_id(c.id)
     .scope(s.clone())
-    .issued_at(UTC::now())
+    .issued_at(Utc::now().naive_utc())
     .expires_at(expiry)
     .build()
     .unwrap();
 
-  diesel::insert(&new_token)
-    .into(refresh_tokens::table)
+  diesel::insert_into(refresh_tokens::table)
+    .values(&new_token)
     .get_result::<RefreshToken>(conn)
     .unwrap()
 }
@@ -186,7 +184,7 @@ pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> Acc
 
   builder
     .token_type("Bearer")
-    .expires_in(at.expires_at.signed_duration_since(UTC::now()).num_seconds())
+    .expires_in(at.expires_at.signed_duration_since(Utc::now().naive_utc()).num_seconds())
     .access_token(access_token)
     .scope(at.scope);
 
@@ -194,7 +192,7 @@ pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> Acc
     Some(refresh_token) => {
       builder.refresh_token(refresh_token.token.hyphenated().to_string());
       match refresh_token.expires_at {
-        Some(expiry) => builder.refresh_expires_in(Some(expiry.signed_duration_since(UTC::now()).num_seconds())),
+        Some(expiry) => builder.refresh_expires_in(Some(expiry.signed_duration_since(Utc::now().naive_utc()).num_seconds())),
         None => builder.refresh_expires_in(None)
       }
     },

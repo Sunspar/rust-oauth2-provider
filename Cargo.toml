@@ -4,28 +4,20 @@ version = "0.1.0"
 authors = ["Andrew Turner <me@sunspar.net>"]
 
 [dependencies]
-base64 = { version = "~ 0.5.0" }
-bcrypt = { version = "~ 0.1.0" }
-chrono = { version = "~ 0.3.0", features = ["serde"] }
-dotenv = { version = "~ 0.10.0" }
-lazy_static = { version = "~ 0.2.0" }
-uuid = { version = "~ 0.5.0", features = ["serde"] }
-# Data Manipulation
-serde = { version = "~ 1.0" }
-serde_derive = { version = "~ 1.0" }
-serde_json = { version = "~ 1.0" }
-derive_builder = { version = "~ 0.4.0", features = ["private_fields"] }
-# Database - PostgreSQL
-diesel = { version = "~ 0.13.0", features = ["postgres", "chrono", "uuid"] }
-diesel_codegen = { version = "~ 0.13.0", features = ["postgres"] }
-r2d2 = { version = "~ 0.7.0" }
-r2d2-diesel = { version = "~ 0.13.0" }
-# Web Framework - Rocket
-rocket = { version = "~ 0.2.0" }
-rocket_codegen = { version = "~ 0.2.0" }
-# Application Logging
-log = { version = "~ 0.3.0" }
-log4rs = { version = "~ 0.7.0" }
-
-[dev-dependencies]
-rocket = { version = "0.2.6", features = ["testing"] }
+uuid = { version = "^ 0.5", features = ["serde"] }
+serde = { version = "^ 1.0.32" }
+serde_derive = { version = "^ 1.0.32" }
+serde_json = { version = "^ 1.0.11" }
+log = { version = "^ 0.3.1" }
+base64 = { version = "^ 0.8.0"}
+bcrypt = { version = "^ 0.1.5" }
+lazy_static = { version = "^ 1.0" }
+config = { version = "^ 0.8.0" }
+derive_builder = { version = "^ 0.5.1" }
+r2d2 = { version = "^ 0.8.2" }
+r2d2-diesel = { version = "^ 1.0" }
+rocket = { version = "^ 0.3.6" }
+rocket_codegen = { version = "^ 0.3.6" }
+chrono = { version = "^ 0.4.0", features = ["serde"] }
+diesel = { version = "^ 1.1.1", features = ["postgres", "chrono", "uuid"] }
+diesel_codegen = { version = "^ 0.16.0", features = ["postgres"] }

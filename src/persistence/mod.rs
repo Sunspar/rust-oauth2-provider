@@ -1,21 +1,63 @@
 use diesel::pg::PgConnection;
-use r2d2::{Config, Pool};
+use r2d2::Pool;
 use r2d2_diesel::ConnectionManager;
-use std::env;
+use SETTINGS;
 
-infer_schema!("dotenv:DATABASE_URL");
-
-lazy_static! {
-    pub static ref DB_POOL: Pool<ConnectionManager<PgConnection>> = init_db_pool();
+table! {
+    clients (id) {
+        id -> Integer,
+        identifier -> VarChar,
+        secret -> VarChar,
+        response_type -> VarChar,
+    }
 }
 
-fn init_db_pool() -> Pool<ConnectionManager<PgConnection>> {
-  let config = Config::builder()
-    .pool_size(10)
-    .build();
+table! {
+    grant_types (id) {
+        id -> Integer,
+        name -> VarChar,
+    }
+}
 
-  let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-  let manager = ConnectionManager::<PgConnection>::new(db_url);
+table! { 
+    client_redirect_uris (id) {
+        id -> Integer,
+        client_id -> Integer,
+        redirect_uri -> VarChar,
+    }
+}
 
-  Pool::new(config, manager).expect("Failed to create pool.")
+table! { 
+    access_tokens (id) {
+        id -> Integer,
+        token -> Uuid,
+        client_id -> Integer,
+        grant_id -> Integer,
+        scope -> VarChar,
+        issued_at -> Timestamp,
+        expires_at -> Timestamp,
+    }
+}
+
+table! {
+    refresh_tokens (id) {
+        id -> Integer,
+        token -> Uuid,
+        client_id -> Integer,
+        scope -> VarChar,
+        issued_at -> Timestamp,
+        expires_at -> Nullable<Timestamp>,
+    }
+}
+
+table!{
+    auth_codes (id) {
+        id -> Integer,
+        client_id -> Integer,
+        name -> VarChar,
+        scope -> VarChar,
+        expires_at -> Timestamp,
+        redirect_uri -> VarChar,
+        user_id -> Nullable<Integer>,
+    }
 }

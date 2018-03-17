@@ -1,6 +1,7 @@
 use rocket::http::{ContentType, Status};
 use rocket::response::Result as RocketResult;
 use rocket::response::{Response, Responder};
+use rocket::Request;
 use std::io::Cursor;
 use serde_json;
 use rocket::http::hyper::header::{CacheControl, CacheDirective, Pragma};
@@ -18,7 +19,7 @@ pub struct AccessTokenResponse {
 }
 
 impl<'r> Responder<'r> for AccessTokenResponse {
-  fn respond(self) -> RocketResult<'r> {
+  fn respond_to(self, _req: &Request) -> RocketResult<'r> {
     Response::build()
       .raw_header("Content-Type", "application/json")
       .raw_header("Cache-Control", "no-cache, no-store")
@@ -40,7 +41,7 @@ pub struct IntrospectionOkResponse {
 }
 
 impl<'r> Responder<'r> for IntrospectionOkResponse {
-  fn respond(self) -> RocketResult<'r> {
+  fn respond_to(self, _req: &Request) -> RocketResult<'r> {
     Response::build()
       .header(ContentType::JSON)
       .header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::NoStore]))
@@ -58,7 +59,7 @@ pub struct IntrospectionErrResponse {
 }
 
 impl<'r> Responder<'r> for IntrospectionErrResponse {
-  fn respond(self) -> RocketResult<'r> {
+  fn respond_to(self, _req: &Request) -> RocketResult<'r> {
     Response::build()
       .header(ContentType::JSON)
       .header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::NoStore]))
@@ -93,7 +94,7 @@ impl OAuth2ErrorResponse {
 }
 
 impl<'r> Responder<'r> for OAuth2ErrorResponse {
-  fn respond(self) -> RocketResult<'r> {
+  fn respond_to(self, _req: &Request) -> RocketResult<'r> {
     let mut response = Response::build();
     response
       .header(ContentType::JSON)

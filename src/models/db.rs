@@ -1,6 +1,5 @@
 use persistence::*;
-use chrono::datetime::DateTime;
-use chrono::offset::utc::UTC;
+use chrono::NaiveDateTime;
 use uuid::Uuid;
 use std::fmt;
 
@@ -39,8 +38,8 @@ pub struct AccessToken {
   pub client_id: i32,
   pub grant_id: i32,
   pub scope: String,
-  pub issued_at: DateTime<UTC>,
-  pub expires_at: DateTime<UTC>
+  pub issued_at: NaiveDateTime,
+  pub expires_at: NaiveDateTime
 }
 
 #[derive(Builder, Debug, Serialize, Deserialize, Insertable)]
@@ -50,8 +49,8 @@ pub struct NewAccessToken {
   pub client_id: i32,
   pub grant_id: i32,
   pub scope: String,
-  pub issued_at: DateTime<UTC>,
-  pub expires_at: DateTime<UTC>
+  pub issued_at: NaiveDateTime,
+  pub expires_at: NaiveDateTime
 }
 
 #[derive(Builder, Debug, Serialize, Deserialize, Identifiable, Queryable, Associations)]
@@ -62,8 +61,8 @@ pub struct RefreshToken {
   pub token: Uuid,
   pub client_id: i32,
   pub scope: String,
-  pub issued_at: DateTime<UTC>,
-  pub expires_at: Option<DateTime<UTC>>
+  pub issued_at: NaiveDateTime,
+  pub expires_at: Option<NaiveDateTime>
 }
 
 #[derive(Builder, Debug, Serialize, Deserialize, Insertable)]
@@ -72,6 +71,6 @@ pub struct RefreshToken {
 pub struct NewRefreshToken {
   pub client_id: i32,
   pub scope: String,
-  pub issued_at: DateTime<UTC>,
-  pub expires_at: Option<DateTime<UTC>>
+  pub issued_at: NaiveDateTime,
+  pub expires_at: Option<NaiveDateTime>
 }

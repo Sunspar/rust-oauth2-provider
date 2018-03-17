@@ -1,4 +1,4 @@
-use chrono::offset::utc::UTC;
+use chrono::offset::Utc;
 use diesel::prelude::*;
 use rocket::request::Form;
 use uuid::Uuid;
@@ -9,6 +9,7 @@ use models::responses::*;
 use persistence::*;
 use utils;
 use web::headers::AuthorizationToken;
+use DB_POOL;
 
 #[post("/oauth/token", data="<req>")]
 pub fn token(
@@ -38,8 +39,8 @@ pub fn token(
       return Err(OAuth2ErrorResponse::InvalidRequest);
     }
   };
-  let ref conn
-   = *DB_POOL.get().unwrap();
+
+  let conn = &*DB_POOL.get().unwrap();
   trace!("Successfully grabbed connection from the database connection pool.");
 
   let result = match request.grant_type.clone() {
@@ -94,11 +95,10 @@ pub fn introspect(
     }
   };
 
-  let ref conn = *DB_POOL.get().unwrap();
-  trace!("Successfully grabbed connection from the database connection pool.");
+  let conn = &*DB_POOL.get().unwrap();
 
   // Ensure client is valid at all
-  let client = match utils::check_client_credentials(conn, &auth_token.user, &auth_token.pass) {
+  let client = match utils::check_client_credentials(&conn, &auth_token.user, &auth_token.pass) {
     Ok(c) => {
       trace!("Client authenticated successfully.");
       c
@@ -123,7 +123,7 @@ pub fn introspect(
   };
   let opt_access_token: QueryResult<AccessToken> = access_tokens::table
     .filter(access_tokens::token.eq(token_as_uuid))
-    .first(conn);
+    .first(&*conn);
   let access_token = match opt_access_token {
     Ok(at) => {
       debug!("access token successfully generated.");
@@ -142,7 +142,7 @@ pub fn introspect(
   }
 
   // expires_at <= Now  -->  not active
-  if access_token.expires_at.signed_duration_since(UTC::now()).num_seconds() <= 0 {
+  if access_token.expires_at.signed_duration_since(Utc::now().naive_utc()).num_seconds() <= 0 {
     debug!("Token is expired.");
     return Err(utils::introspection_error())
   }

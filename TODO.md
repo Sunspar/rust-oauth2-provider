@@ -1,3 +1,6 @@
-- Anything from the "Known Deviations" sections of the readme
-- perform an actual cleanup and refactoring of `utils/mod.rs` as  Im kind of shoving everything in the closet in an attempt to tidy the rest of the room up
-- make as many `String` values `&str` values where possible
+In order of importance, with higher items needing a look first:
+
+- fix outstanding compiler errors with respect to the uuid crate
+- investigate general code flow -- can we place things in better modules?
+- Move as many functions taking `String` arguments to either `&str` or a better type if context dictates
+- Anything from the "Known Deviations" to bring us closer to full compliance with the RFCs

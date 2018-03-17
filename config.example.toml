@@ -1,0 +1,20 @@
+[web_server]
+host = "localhost"
+port = "4000"
+
+[db]
+host = "localhost"
+port = 5432
+db_name = "oa2p"
+user = "oa2p"
+pass = "oa2p"
+pool_size = 10
+
+[logging]
+time_format = "[%Y-%m-%d %H:%M:%S]"
+level = "info"
+
+[oauth]
+access_token_ttl = 3600
+refresh_token_ttl = 3600
+
