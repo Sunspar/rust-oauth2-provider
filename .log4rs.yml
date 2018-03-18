@@ -11,10 +11,10 @@ appenders:
 root:
   level: warn
   appenders:
-    - logfile
+    - stdout
 loggers:
   oa2p:
     level: trace
     appenders:
-      - logfile
+      - stdout
     additive: false

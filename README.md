@@ -46,20 +46,32 @@ Currently client creation needs to happen manually. This means that you need to 
 
 ### Known Deviations
 #### RFC 6749
-- No check to ensure that `client_credentials` grant is only used by confidential clients
-- Not all optional fields are available
-- document `refresh_expires_in` on token responses, as its not a standard field.
+- SSL support missing at the web framework level
+- codify client tyles ("confidental" / "public") better
+- (2.3.1) support for `client_id` / `client_secret` to auth via post params
+- (3.1) authorization endpoint and associated form are not implemented
+- redirect endpoint is not implemented
+- unregistered clients are out of scope for this providers
+- (3.3) clients require an initial scope when created -- requests without a scope should use this entire value
+- (4.1) support for the `Authorization Code` grant
+- (4.2) support for the `Implicit` grant
+- (4.3) support for the `Resource Owner Password Credentials` grant
+- no check to ensure that confidential clients are always authenticated (because for now, the system flat out refuses you if you dont auth in the header)
+- loosen auth header requirements for refresh tokens and non-`confidential` clients
+- we need to document `refresh_expires_in` on token responses, as its not a standard field.
 - Check if clients need scopes associated with them, and if they do we need to verify scope requests for tokens against their client's scope as well
-- No support for the authorization_code, implicit or client_password grant types 
-    - We are not currently validating redirect_uri redirections as the appropriate grant(s) are not supported yet
-    - redirection endpoint remains unimplemented, as the grant type that requires it is also missing
 - We do not currently support client application creation via any client facing mechanism (manual db entry required)
 
 #### RFC 6750
-- Consider the form-encoded authentication alongside the authorization header
+- SSL support missing at the web framework level
+- Support for the token in the post body (2.2)
+- Support for URI param passing is missing and not intended for inclusion (2.3)
 
 #### RFC 7662
-- Not all optional fields are available (2.2)
+- requests should support the `token_type_hint`, and use that to narrow down the search if provided
+- ok response missing `username` field
+- ok response is missing the `token_type` field
+- ok response is missing the `nbf` field
 
 ## Security Notice
 A custom fmt::Debug implementation exists for Client in order to make sure that client secrets arent accidentally leaked during logging.
