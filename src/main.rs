@@ -24,6 +24,7 @@ extern crate derive_builder;
 extern crate rocket;
 #[macro_use]
 extern crate log;
+extern crate log4rs;
 
 use diesel::pg::PgConnection;
 use r2d2::Pool;
@@ -68,6 +69,8 @@ lazy_static! {
 }
 
 fn main() {
+    log4rs::init_file(".log4rs.yml", Default::default()).unwrap();
+
     rocket::ignite()
         .mount(
             "/",
