@@ -39,36 +39,25 @@ pub fn check_client_credentials<'a>(
     client_secret: &'a str,
 ) -> Result<Client, OAuth2ErrorResponse> {
     trace!("Checking client credentials...");
+
     let opt_client: QueryResult<Client> = clients::table
         .filter(clients::identifier.eq(client_id))
         .first(conn);
-    let unverified_client = match opt_client {
-        Ok(c) => {
-            trace!("unverified_client: {:?}", c);
-            c
-        }
-        Err(_) => {
-            trace!("No client with this username exists. Returning with `invalid_client` error.");
-            return Err(OAuth2ErrorResponse::InvalidClient);
-        }
-    };
+
+    trace!("Client result: {:?}", &opt_client);
+
+    let unverified_client = opt_client.map_err(|_| OAuth2ErrorResponse::InvalidClient)?;
 
     // Check the hashed client_secret against the user provided secret + the
     // clients marked salt
-    match bcrypt::verify(&client_secret, &unverified_client.secret) {
-        Err(why) => {
-            debug!("Failed to verify client secret. Reason: {:?}", why);
-            Err(OAuth2ErrorResponse::InvalidClient)
-        }
-        Ok(false) => {
-            debug!("Client secret failed validation.");
-            Err(OAuth2ErrorResponse::InvalidClient)
-        }
-        Ok(true) => {
-            debug!("Client credentials are valid!");
-            Ok(unverified_client)
-        }
-    }
+    let result_verified_client = bcrypt::verify(&client_secret, &unverified_client.secret);
+    trace!(
+        "Attempted to verify client. Underlying result is: {:?}",
+        &result_verified_client
+    );
+    result_verified_client.map_err(|_| OAuth2ErrorResponse::InvalidClient)?;
+
+    Ok(unverified_client)
 }
 
 /// Validates the Grant Type passed in.
@@ -83,10 +72,8 @@ fn check_grant_type<'r>(
     let opt: QueryResult<GrantType> = grant_types::table
         .filter(grant_types::name.eq(grant_type))
         .first(conn);
-    match opt {
-        Err(_) => Err(OAuth2ErrorResponse::InvalidGrant),
-        Ok(g) => Ok(g),
-    }
+
+    opt.map_err(|_| OAuth2ErrorResponse::InvalidGrant)
 }
 
 /// Validates a Refresh Token, ensuring the client owns the token.
@@ -99,10 +86,7 @@ fn check_refresh_token<'a>(
     client: &Client,
     token: &'a str,
 ) -> Result<RefreshToken, OAuth2ErrorResponse> {
-    let refresh_token = match Uuid::parse_str(&token) {
-        Ok(i) => i,
-        Err(_) => return Err(OAuth2ErrorResponse::InvalidRequest),
-    };
+    let refresh_token = Uuid::parse_str(&token).map_err(|_| OAuth2ErrorResponse::InvalidRequest)?;
 
     let token = refresh_tokens::table
         .filter(refresh_tokens::token.eq(refresh_token))
@@ -110,10 +94,7 @@ fn check_refresh_token<'a>(
         .order(refresh_tokens::issued_at.desc())
         .first(conn);
 
-    match token {
-        Ok(t) => Ok(t),
-        Err(_) => Err(OAuth2ErrorResponse::InvalidRequest),
-    }
+    token.map_err(|_| OAuth2ErrorResponse::InvalidRequest)
 }
 
 /// Validates a Scope list.
@@ -132,7 +113,7 @@ fn check_scope<'a>(
 
     for s in &request_scopes {
         if !old_scopes.contains(&s) {
-            return Err(OAuth2ErrorResponse::InvalidRequest);
+            return Err(OAuth2ErrorResponse::InvalidScope);
         }
     }
 
@@ -158,13 +139,13 @@ pub fn generate_access_token(
         .issued_at(Utc::now().naive_utc())
         .expires_at(expiry)
         .build()
-        .unwrap();
+        .unwrap(); // TODO: remove unwrap
 
     let res = diesel::insert_into(access_tokens::table)
         .values(&new_token)
         .get_result::<AccessToken>(conn);
 
-    res.unwrap()
+    res.unwrap() // TODO: remove unwrap
 }
 
 /// Generates a Refresh Token.
@@ -185,12 +166,12 @@ pub fn generate_refresh_token(conn: &PgConnection, c: &Client, s: &str) -> Refre
         .issued_at(Utc::now().naive_utc())
         .expires_at(expiry)
         .build()
-        .unwrap();
+        .unwrap(); // TODO: remove unwrap
 
     diesel::insert_into(refresh_tokens::table)
         .values(&new_token)
         .get_result::<RefreshToken>(conn)
-        .unwrap()
+        .unwrap() // TODO: remove unwrap
 }
 
 /// Generates an AccessTokenResponse.
@@ -226,12 +207,12 @@ pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> Acc
         None => builder.refresh_token(None).refresh_expires_in(None),
     };
 
-    builder.build().unwrap()
+    builder.build().unwrap() // TODO: remove unwrap
 }
 
 pub fn get_grant_type_by_name(conn: &PgConnection, name: &str) -> GrantType {
     grant_types::table
         .filter(grant_types::name.eq(name))
         .first(conn)
-        .unwrap()
+        .unwrap() // TODO: remove unwrap
 }

@@ -16,72 +16,32 @@ pub fn post(
     req: Option<Form<IntrospectionRequest>>,
     auth: Option<AuthorizationToken>,
 ) -> Result<IntrospectionOkResponse, IntrospectionErrResponse> {
-    let auth_token = match auth {
-        Some(at) => {
-            trace!("Authentication token looks okay: {:?}", at);
-            at
-        }
-        None => {
-            trace!("Malformed Authorization header caused the authentication token guard to fail.");
-            return Err(utils::introspection_error());
-        }
-    };
+    debug!("Checking validitity of a supposed auth token.");
+    let auth_token = auth.ok_or(utils::introspection_error())?;
 
-    let request = match req {
-        Some(ir) => {
-            let res = ir.into_inner();
-            trace!("Request seems okay: {:?}", res);
-            res
-        }
-        None => {
-            trace!("Request extraction failed. Most likely the user sent an invalid form body.");
-            return Err(utils::introspection_error());
-        }
-    };
+    trace!("Introspect endpoint request: {:?}", req);
+    let request = req.map(|v| v.into_inner())
+        .ok_or(utils::introspection_error())?;
 
-    let conn = &*DB_POOL.get().unwrap();
+    trace!("Attempting to get DB connection.");
+    let conn = &*DB_POOL.get().unwrap(); // TODO: remove unwrap
+    trace!("DB connection successfully established.");
 
-    // Ensure client is valid at all
-    let client = match utils::check_client_credentials(&conn, &auth_token.user, &auth_token.pass) {
-        Ok(c) => {
-            trace!("Client authenticated successfully.");
-            c
-        }
-        Err(_) => {
-            trace!("Client not authenticated -- most likely typo in user or pass.");
-            return Err(utils::introspection_error());
-        }
-    };
+    trace!("authenticating client credentials: {:?}", &auth_token);
+    let client = utils::check_client_credentials(&conn, &auth_token.user, &auth_token.pass)
+        .map_err(|_| utils::introspection_error())?;
 
     // Tokens are always UUIDs
     // No token  -->  not active
-    let token_as_uuid = match Uuid::parse_str(&request.token) {
-        Ok(i) => {
-            trace!("Token was parsable as UUID. Token: {:?}", i);
-            i
-        }
-        Err(_) => {
-            trace!(
-                "Token was not parsable into UUID. Token: {:?}",
-                request.token
-            );
-            return Err(utils::introspection_error());
-        }
-    };
+    trace!("Parsing token into UUID: {:?}", &request.token);
+    let token_as_uuid = Uuid::parse_str(&request.token).map_err(|_| utils::introspection_error())?;
 
-    let opt_access_token: QueryResult<AccessToken> = access_tokens::table
+    let opt_token: QueryResult<AccessToken> = access_tokens::table
         .filter(access_tokens::token.eq(token_as_uuid))
-        .first(&*conn);
-    let access_token = match opt_access_token {
-        Ok(at) => {
-            debug!("access token successfully generated.");
-            at
-        }
-        Err(why) => {
-            debug!("no token generated: {:?}", why);
-            return Err(utils::introspection_error());
-        }
-    };
+        .first(conn);
+
+    trace!("Access Token from DB: {:?}", opt_token);
+    let access_token = opt_token.map_err(|_| utils::introspection_error())?;
 
     // Make sure the authenticated client owns this token
     if client.id != access_token.client_id {
@@ -107,7 +67,7 @@ pub fn post(
         .exp(Some(access_token.expires_at.timestamp()))
         .iat(Some(access_token.issued_at.timestamp()))
         .build()
-        .unwrap();
+        .unwrap(); // TODO: remove unwrap
     debug!("Token is valid: {:?}", response);
     info!(
         "Client [{}] introspected on token [{}]",

@@ -50,6 +50,7 @@ impl<'r> Responder<'r> for OAuth2ErrorResponse {
             }
         }
 
+        // TODO: Use serde::Deserialize here instead of this
         let json = json!({
       "error": self.message()
     });

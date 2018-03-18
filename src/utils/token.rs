@@ -31,10 +31,7 @@ pub fn client_credentials(
     }
 
     // Ensure the client information from the request is valid
-    let client = match utils::check_client_credentials(conn, &auth.user, &auth.pass) {
-        Ok(c) => c,
-        Err(e) => return Err(e),
-    };
+    let client = utils::check_client_credentials(conn, &auth.user, &auth.pass)?;
 
     // Is the client a `confidential` client?
     // TODO: This works for now but we should do something better than string
@@ -44,12 +41,9 @@ pub fn client_credentials(
     }
 
     // Ensure valid grant type
-    let grant_type = match utils::check_grant_type(conn, &req.grant_type.unwrap()) {
-        Ok(g) => g,
-        Err(e) => return Err(e),
-    };
+    let grant_type = utils::check_grant_type(conn, &req.grant_type.unwrap())?; // TODO: remove unwrap
 
-    let scope = &req.scope.unwrap();
+    let scope = &req.scope.unwrap(); // TODO: remove unwrap
     let at = utils::generate_access_token(conn, &client, &grant_type, scope);
     let rt = utils::generate_refresh_token(conn, &client, scope);
     Ok(utils::generate_token_response(at, Some(rt)))
@@ -76,21 +70,10 @@ pub fn refresh_token(
     // Fetch the building blocks using request data. This means the client, refresh
     // token, and scope. For the client and refresh token, we should be able to
     // get hits out of the database.
-    let client = match utils::check_client_credentials(conn, &auth.user, &auth.pass) {
-        Ok(c) => c,
-        Err(_) => return Err(OAuth2ErrorResponse::InvalidClient),
-    };
-
+    let client = utils::check_client_credentials(conn, &auth.user, &auth.pass)?;
     let refresh_token =
-        match utils::check_refresh_token(conn, &client, &req.refresh_token.clone().unwrap()) {
-            Ok(record) => record,
-            Err(_) => return Err(OAuth2ErrorResponse::InvalidRequest),
-        };
-
-    let scope = match utils::check_scope(conn, &req.scope.unwrap(), &refresh_token.scope.clone()) {
-        Ok(s) => s,
-        Err(_) => return Err(OAuth2ErrorResponse::InvalidScope),
-    };
+        utils::check_refresh_token(conn, &client, &req.refresh_token.clone().unwrap())?; // TODO: Remove unwrap
+    let scope = utils::check_scope(conn, &req.scope.unwrap(), &refresh_token.scope.clone())?; // TODO: Remove unwrap
 
     // The request appears valid. Generate an access token and reply with it.
     let grant_type = utils::get_grant_type_by_name(conn, "refresh_token");

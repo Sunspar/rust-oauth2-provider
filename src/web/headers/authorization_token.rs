@@ -27,10 +27,11 @@ impl<'a, 'r> FromRequest<'a, 'r> for AuthorizationToken {
     type Error = ();
 
     fn from_request(req: &'a Request<'r>) -> Outcome<Self, (Status, ()), ()> {
-        // TODO: Check for two parts when splitting components and user/pass as may
-        // return HTTP 500 Enforce an authorization header...
+        // TODO: clean this up
+        // Check for two parts when splitting components and user/pass as may return HTTP 500 Enforce an authorization
+        // header...
         let components_vec = match req.headers().get_one("Authorization") {
-            Some(ref v) => v,
+            Some(v) => v,
             None => return Failure((Status::Unauthorized, ())),
         };
 
