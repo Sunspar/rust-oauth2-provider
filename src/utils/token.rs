@@ -7,11 +7,12 @@
 //! data sent by the caller.
 
 use diesel::pg::PgConnection;
-use models::requests::access_token::AccessTokenRequest;
-use models::responses::access_token::AccessTokenResponse;
-use models::responses::oauth2_error::OAuth2ErrorResponse;
-use utils;
-use web::headers::authorization_token::AuthorizationToken;
+
+use crate::models::requests::access_token::AccessTokenRequest;
+use crate::models::responses::access_token::AccessTokenResponse;
+use crate::models::responses::oauth2_error::OAuth2ErrorResponse;
+use crate::utils;
+use crate::models::authorization_token::AuthorizationToken;
 
 /// Processes a `client_credentials` request, and returns a Result on whether
 /// or not it was successful.

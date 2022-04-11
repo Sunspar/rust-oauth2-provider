@@ -1,8 +1,7 @@
-use rocket::Request;
 use rocket::http::{ContentType, Status};
-use rocket::http::hyper::header::{CacheControl, CacheDirective, Pragma};
-use rocket::response::{Responder, Response};
-use rocket::response::Result as RocketResult;
+use rocket::request::Request;
+use rocket::response::{Responder, Response, Result};
+use serde_json::{self, json};
 use std::io::Cursor;
 
 #[derive(Debug)]
@@ -28,16 +27,13 @@ impl OAuth2ErrorResponse {
     }
 }
 
-impl<'r> Responder<'r> for OAuth2ErrorResponse {
-    fn respond_to(self, _req: &Request) -> RocketResult<'r> {
+impl<'r> Responder<'r, 'r> for OAuth2ErrorResponse {
+    fn respond_to(self, _req: &Request) -> Result<'r> {
         let mut response = Response::build();
         response
             .header(ContentType::JSON)
-            .header(CacheControl(vec![
-                CacheDirective::NoCache,
-                CacheDirective::NoStore,
-            ]))
-            .header(Pragma::NoCache);
+            .raw_header("Cache-Control", "max-age=0, no-cache, no-store")
+            .raw_header("Pragma", "no-cache");
 
         match self {
             OAuth2ErrorResponse::InvalidClient => {
@@ -55,6 +51,6 @@ impl<'r> Responder<'r> for OAuth2ErrorResponse {
       "error": self.message()
     });
 
-        response.sized_body(Cursor::new(json.to_string())).ok()
+        response.sized_body(None, Cursor::new(json.to_string())).ok()
     }
 }

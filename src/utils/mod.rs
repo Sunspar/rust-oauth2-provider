@@ -1,20 +1,20 @@
 pub mod token;
 
-use SETTINGS;
 use bcrypt;
 use chrono::Duration;
 use chrono::offset::Utc;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use models::db::*;
-use models::responses::access_token::{AccessTokenResponse, AccessTokenResponseBuilder};
-use models::responses::introspection_err::{IntrospectionErrResponse,
-                                           IntrospectionErrResponseBuilder};
-use models::responses::oauth2_error::OAuth2ErrorResponse;
-use persistence::*;
 use std::ops::Add;
 use uuid::Uuid;
+
+use crate::SETTINGS;
+use crate::models::responses::introspection_err::{IntrospectionErrResponse, IntrospectionErrResponseBuilder};
+use crate::models::responses::oauth2_error::OAuth2ErrorResponse;
+use crate::models::responses::access_token::{AccessTokenResponse, AccessTokenResponseBuilder};
+use crate::models::db::*;
+use crate::persistence::*;
 
 /// Generates an IntrospectionErrResponse struct.
 ///
@@ -179,7 +179,7 @@ pub fn generate_refresh_token(conn: &PgConnection, c: &Client, s: &str) -> Refre
 /// Returns: AccessTokenResponse --- the access token response object that
 /// should be sent to the caller.
 pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> AccessTokenResponse {
-    let access_token = at.token.hyphenated().to_string();
+    let access_token = at.token.to_hyphenated().to_string();
     let mut builder = AccessTokenResponseBuilder::default();
 
     builder
@@ -194,7 +194,7 @@ pub fn generate_token_response(at: AccessToken, rt: Option<RefreshToken>) -> Acc
 
     match rt {
         Some(refresh_token) => {
-            builder.refresh_token(refresh_token.token.hyphenated().to_string());
+            builder.refresh_token(refresh_token.token.to_hyphenated().to_string());
             match refresh_token.expires_at {
                 Some(expiry) => builder.refresh_expires_in(Some(
                     expiry

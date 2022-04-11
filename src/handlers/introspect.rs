@@ -1,15 +1,16 @@
-use DB_POOL;
 use chrono::offset::Utc;
 use diesel::prelude::*;
-use models::db::*;
-use models::requests::introspect::IntrospectionRequest;
-use models::responses::introspection_err::IntrospectionErrResponse;
-use models::responses::introspection_ok::{IntrospectionOkResponse, IntrospectionOkResponseBuilder};
-use persistence::*;
-use rocket::request::Form;
-use utils;
+use rocket::form::Form;
 use uuid::Uuid;
-use web::headers::authorization_token::AuthorizationToken;
+
+use crate::utils;
+use crate::models::db::*;
+use crate::models::requests::introspect::IntrospectionRequest;
+use crate::models::responses::introspection_err::IntrospectionErrResponse;
+use crate::models::responses::introspection_ok::{IntrospectionOkResponse, IntrospectionOkResponseBuilder};
+use crate::persistence::*;
+use crate::DB_POOL;
+use crate::models::authorization_token::AuthorizationToken;
 
 #[post("/oauth/introspect", data = "<req>")]
 pub fn post(

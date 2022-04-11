@@ -1,10 +1,10 @@
-use DB_POOL;
-use models::requests::access_token::AccessTokenRequest;
-use models::responses::access_token::AccessTokenResponse;
-use models::responses::oauth2_error::OAuth2ErrorResponse;
-use rocket::request::Form;
-use utils;
-use web::headers::authorization_token::AuthorizationToken;
+use crate::DB_POOL;
+use crate::models::requests::access_token::AccessTokenRequest;
+use crate::models::responses::access_token::AccessTokenResponse;
+use crate::models::responses::oauth2_error::OAuth2ErrorResponse;
+use rocket::form::Form;
+use crate::utils;
+use crate::models::authorization_token::AuthorizationToken;
 
 #[post("/oauth/token", data = "<req>")]
 pub fn post(
@@ -17,7 +17,8 @@ pub fn post(
 
     trace!("Extracting access token");
     debug!("token request: {:?}", &req);
-    let request = req.map(|v| v.into_inner())
+    let request = req
+        .map(|v| v.into_inner())
         .ok_or(OAuth2ErrorResponse::InvalidRequest)?;
 
     let conn = &*DB_POOL.get().unwrap(); // TODO: remove unwrap

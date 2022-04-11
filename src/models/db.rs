@@ -1,7 +1,8 @@
 use chrono::NaiveDateTime;
-use persistence::*;
 use std::fmt;
 use uuid::Uuid;
+
+use crate::persistence::*;
 
 #[derive(Builder, Serialize, Deserialize, Identifiable, Queryable, Associations)]
 #[builder(setter(into))]

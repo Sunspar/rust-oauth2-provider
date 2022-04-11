@@ -2,23 +2,25 @@
 name = "oa2p"
 version = "0.1.0"
 authors = ["Andrew Turner <me@sunspar.net>"]
+edition = "2021"
 
 [dependencies]
-uuid = { version = "^ 0.5", features = ["serde"] }
-serde = { version = "^ 1.0.32" }
-serde_derive = { version = "^ 1.0.32" }
-serde_json = { version = "^ 1.0.11" }
-log = { version = "^ 0.3.1" }
-log4rs = { version = "^ 0.8.0" }
-base64 = { version = "^ 0.8.0"}
-bcrypt = { version = "^ 0.1.5" }
+uuid = { version = "0.8.2", features = ["v4", "serde"] }
+serde = { version = "^ 1.0" }
+serde_derive = { version = "^ 1.0" }
+serde_json = { version = "^ 1.0" }
+log = { version = "^ 0.4.0" }
+log4rs = { version = "^ 1.0" }
+base64 = { version = "^ 0.13.0"}
+bcrypt = { version = "^ 0.12" }
 lazy_static = { version = "^ 1.0" }
-config = { version = "^ 0.8.0" }
-derive_builder = { version = "^ 0.5.1" }
-r2d2 = { version = "^ 0.8.2" }
+config = { version = "^ 0.13", features = ["toml"] }
+derive_builder = { version = "^ 0.11" }
+r2d2 = { version = "^ 0.8" }
 r2d2-diesel = { version = "^ 1.0" }
-rocket = { version = "^ 0.3.6" }
-rocket_codegen = { version = "^ 0.3.6" }
-chrono = { version = "^ 0.4.0", features = ["serde"] }
-diesel = { version = "^ 1.1.1", features = ["postgres", "chrono", "uuid"] }
+rocket = { version = "0.5.0-rc.1" }
+rocket_codegen = { version = "0.5.0-rc.1" }
+chrono = { version = "^ 0.4", features = ["serde"] }
+diesel = { version = "^ 1.4", features = ["postgres", "chrono", "uuidv07", "r2d2", "serde_json"] }
 diesel_codegen = { version = "^ 0.16.0", features = ["postgres"] }
+once_cell = { version = "^ 1.0" }

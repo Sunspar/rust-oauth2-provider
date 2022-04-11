@@ -1,3 +1,4 @@
+
 table! {
     clients (id) {
         id -> Integer,

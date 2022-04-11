@@ -1,7 +1,6 @@
-use rocket::Request;
 use rocket::http::Status;
-use rocket::response::{Responder, Response};
-use rocket::response::Result as RocketResult;
+use rocket::request::Request;
+use rocket::response::{Responder, Response, Result};
 use serde_json;
 use std::io::Cursor;
 
@@ -17,14 +16,14 @@ pub struct AccessTokenResponse {
     pub refresh_expires_in: Option<i64>,
 }
 
-impl<'r> Responder<'r> for AccessTokenResponse {
-    fn respond_to(self, _req: &Request) -> RocketResult<'r> {
+impl<'r> Responder<'r, 'r> for AccessTokenResponse {
+    fn respond_to(self, _req: &Request) -> Result<'r> {
         Response::build()
             .raw_header("Content-Type", "application/json")
             .raw_header("Cache-Control", "no-cache, no-store")
             .raw_header("Pragma", "no-cache")
             .status(Status::Ok)
-            .sized_body(Cursor::new(serde_json::to_string(&self).unwrap()))
+            .sized_body(None, Cursor::new(serde_json::to_string(&self).unwrap()))
             .ok()
     }
 }
